@@ -11,8 +11,8 @@
 // sempre informa qual modo produziu o resultado.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { CATEGORIAS, CORES, LOCAIS, normalizar } from "../public/compartilhado/catalogo.js";
-import { analiseDemonstracao, buscarLocal, compararLocal } from "../public/compartilhado/regras.js";
+import { CATEGORIAS, CORES, LOCAIS, TIPOS_DETALHE, normalizar } from "../public/compartilhado/catalogo.js";
+import { analiseManual, buscarLocal, compararLocal } from "../public/compartilhado/regras.js";
 
 const MODELO = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const cliente = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -65,10 +65,10 @@ const SCHEMA_ANALISE = {
     tags: { type: "array", items: { type: "string" }, description: "3 a 6 palavras-chave" },
     dadosSensiveis: { type: "boolean", description: "true se a foto mostra nome, número de documento, rosto ou outro dado pessoal legível" },
     avisoPrivacidade: { type: "string", description: "Explique o dado pessoal visto, ou string vazia" },
-    perguntaSugerida: { type: "string", description: "Pergunta de verificação de posse" },
+    tipoDetalhe: { type: "string", enum: TIPOS_DETALHE.map((t) => t.id), description: "Tipo de detalhe que só o dono saberia e que não aparece na foto" },
     confianca: { type: "number", description: "0 a 1" }
   },
-  required: ["titulo", "descricao", "categoria", "cor", "tags", "dadosSensiveis", "avisoPrivacidade", "perguntaSugerida", "confianca"],
+  required: ["titulo", "descricao", "categoria", "cor", "tags", "dadosSensiveis", "avisoPrivacidade", "tipoDetalhe", "confianca"],
   additionalProperties: false
 };
 
@@ -78,8 +78,8 @@ Analise a foto e descreva SOMENTE o objeto perdido, em português do Brasil, de 
 - Não invente detalhes que não aparecem na foto; se algo estiver incerto, diga "aparentemente".
 - Se a foto mostrar dados pessoais legíveis (nome, matrícula, CPF, RG, rosto, telefone), marque dadosSensiveis=true,
   explique em avisoPrivacidade e NUNCA transcreva esses dados na descrição.
-- A pergunta de verificação deve tratar de um detalhe que só o dono saberia e que NÃO esteja evidente na foto
-  (ex.: "O que está escrito na primeira página?", "Quantas chaves há no chaveiro?").`;
+- Em tipoDetalhe, indique o tipo de detalhe que só o dono saberia e que NÃO esteja evidente na foto:
+  escrito (nome, anotação), dentro (conteúdo), marca (adesivo, desenho), quantidade, defeito ou outro.`;
 
 export async function analisarFoto({ buffer, mime, nomeArquivo }) {
   if (cliente) {
@@ -97,7 +97,7 @@ export async function analisarFoto({ buffer, mime, nomeArquivo }) {
       registrarFalha("analisarFoto", e);
     }
   }
-  return analiseDemonstracao(nomeArquivo);
+  return analiseManual(); // a interface roda o modelo aberto no navegador
 }
 
 // ---------------------------------------------------------------------------

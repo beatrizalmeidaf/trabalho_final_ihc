@@ -2,9 +2,9 @@
 // Usa o MESMO núcleo da API do servidor (compartilhado/nucleo.js), mas guarda os dados no
 // localStorage deste navegador e usa as regras do modo demonstração no lugar do Claude.
 import { criarNucleo, materializarSemente } from "./compartilhado/nucleo.js";
-import { analiseDemonstracao, buscarLocal, compararLocal } from "./compartilhado/regras.js";
+import { analiseManual, buscarLocal, compararLocal } from "./compartilhado/regras.js";
 
-const CHAVE = "achados.db.v2";
+const CHAVE = "achados.db.v3"; // mude a versão quando a semente mudar
 
 export async function criarApiEstatica() {
   const semente = await (await fetch("dados/seed.json")).json();
@@ -58,8 +58,8 @@ export async function criarApiEstatica() {
       const arquivo = opcoes.body?.get?.("foto");
       if (!arquivo || !arquivo.type?.startsWith("image/")) throw new Error("Envie uma foto em JPG, PNG, WEBP ou GIF.");
       if (arquivo.size > 5 * 1024 * 1024) throw new Error("A foto deve ter até 5 MB.");
-      await new Promise((r) => setTimeout(r, 900)); // simula o tempo de análise
-      return { foto: await reduzir(arquivo), analise: analiseDemonstracao(arquivo.name) };
+      // Sem servidor: a interface analisa a foto com o modelo aberto que roda no navegador.
+      return { foto: await reduzir(arquivo), analise: analiseManual() };
     }
     const corpo = opcoes.json ?? {};
     const consulta = Object.fromEntries(new URLSearchParams(qs || ""));

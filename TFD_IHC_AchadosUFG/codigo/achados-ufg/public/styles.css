@@ -267,3 +267,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--azul); outline: 
 .texto-suave { color: var(--texto-suave); }
 .mt { margin-top: 16px; }
 .rodape { max-width: 1120px; margin: 0 auto; padding: 8px 16px 24px; font-size: .8rem; color: var(--texto-suave); text-align: center; }
+/* chips de escolha única (tipo de detalhe secreto) */
+.chip-opcao { position: relative; cursor: pointer; min-height: 40px; border: 1.5px solid var(--borda); background: var(--superficie); color: var(--texto); }
+.chip-opcao input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip-opcao:has(input:checked) { background: var(--azul); border-color: var(--azul); color: #fff; }
+.chip-opcao:has(input:focus-visible) { box-shadow: var(--foco); }
+fieldset[disabled] { opacity: .45; }

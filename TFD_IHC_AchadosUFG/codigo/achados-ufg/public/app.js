@@ -372,18 +372,36 @@ function passoFoto() {
   ["dragenter", "dragover"].forEach((ev) => area.addEventListener(ev, (e) => { e.preventDefault(); area.classList.add("arrastando"); }));
   ["dragleave", "drop"].forEach((ev) => area.addEventListener(ev, (e) => { e.preventDefault(); area.classList.remove("arrastando"); }));
   area.addEventListener("drop", (e) => e.dataTransfer.files[0] && enviarFoto(e.dataTransfer.files[0]));
-  $("#sem-foto").onclick = () => { rascunho = { passo: 1, foto: null, ia: null, campos: { titulo: "", descricao: "", categoria: "outro", cor: "colorido", tags: [], perguntaSugerida: "" } }; irPara(1); };
+  $("#sem-foto").onclick = () => { rascunho = { passo: 1, foto: null, ia: null, campos: { titulo: "", descricao: "", categoria: "outro", cor: "colorido", tags: [], tipoDetalhe: "marca" } }; irPara(1); };
+}
+
+function estadoCarregando(titulo, texto, progresso = null) {
+  return `<div class="card carregando"><span class="spinner" aria-hidden="true"></span><span style="flex:1"><strong>${titulo}</strong><br><span class="texto-suave">${texto}</span>
+    ${progresso === null ? "" : `<span class="compat-barra" style="display:block;margin-top:8px" role="progressbar" aria-valuenow="${progresso}" aria-valuemin="0" aria-valuemax="100" aria-label="Download do modelo"><span style="width:${progresso}%;background:var(--azul)"></span></span>`}</span></div>`;
 }
 
 async function enviarFoto(arquivo) {
   const estado = $("#estado-foto");
   if (!arquivo.type.startsWith("image/")) { estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>Esse arquivo não é uma imagem. Escolha uma foto JPG ou PNG.</span></div>`; return; }
-  estado.innerHTML = `<div class="card carregando"><span class="spinner" aria-hidden="true"></span><span><strong>Analisando a foto…</strong><br><span class="texto-suave">A IA está identificando o objeto. Isso leva alguns segundos.</span></span></div>`;
+  estado.innerHTML = estadoCarregando("Analisando a foto…", "A IA está identificando o objeto. Isso leva alguns segundos.");
   const fd = new FormData(); fd.append("foto", arquivo);
   try {
     const r = await api("/api/analisar", { method: "POST", body: fd });
-    const a = r.analise;
-    rascunho = { passo: 1, foto: r.foto, ia: a, campos: { titulo: a.titulo, descricao: a.descricao, categoria: a.categoria, cor: a.cor, tags: a.tags, perguntaSugerida: a.perguntaSugerida } };
+    let a = r.analise;
+    if (a.fonte === "manual") {
+      // Sem Claude: roda o modelo aberto CLIP no próprio navegador.
+      const urlLocal = URL.createObjectURL(arquivo);
+      try {
+        const { analisarNoNavegador } = await import("./ia-navegador.js");
+        a = await analisarNoNavegador(urlLocal, (p) => {
+          estado.innerHTML = estadoCarregando("Preparando a IA no seu navegador…", `Baixando o modelo aberto CLIP (cerca de 90 MB, só na primeira vez): ${p}%`, p);
+        });
+      } catch (erro) {
+        console.warn("IA no navegador indisponível:", erro);
+        a = { ...a, mensagem: "Não foi possível carregar a IA no navegador (sem internet ou navegador sem suporte). Preencha os campos manualmente." };
+      } finally { URL.revokeObjectURL(urlLocal); }
+    }
+    rascunho = { passo: 1, foto: r.foto, ia: a, campos: { titulo: a.titulo, descricao: a.descricao, categoria: a.categoria, cor: a.cor, tags: a.tags, tipoDetalhe: a.tipoDetalhe || "marca" } };
     irPara(1);
   } catch (e) {
     estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(e.message)}</span></div>`;
@@ -400,9 +418,11 @@ function passoDescricao() {
       <div>${foto ? `<div class="item-foto ${ia?.dadosSensiveis ? "" : ""}"><img src="${esc(foto)}" alt="Foto enviada do objeto"></div>` : '<div class="card vazio">Sem foto</div>'}
         ${foto ? '<button class="btn btn-fantasma btn-bloco" id="trocar-foto">Trocar foto</button>' : ""}</div>
       <form id="form-desc" novalidate>
-        ${veioDaIA ? `<div class="aviso aviso-ia">${ICONES.ia}<span><strong>Sugestão da IA${ia.fonte === "demonstracao" ? " (modo demonstração)" : ""}.</strong> Revise e corrija o que for preciso — você tem a palavra final.${ia.confianca ? ` Confiança: ${Math.round(ia.confianca * 100)}%.` : ""}</span></div>` : ""}
+        ${veioDaIA ? `<div class="aviso aviso-ia">${ICONES.ia}<span><strong>${ia.fonte === "navegador" ? "Sugestão da IA do seu navegador (modelo aberto CLIP)." : "Sugestão da IA (Claude)."}</strong>
+          ${ia.fonte === "navegador" ? "Ela reconhece o tipo de objeto e a cor; acrescente marcas e detalhes." : "Revise e corrija o que for preciso."} Você tem a palavra final.${ia.confianca ? ` Confiança: ${Math.round(ia.confianca * 100)}%.` : ""}
+          ${ia.alternativas?.length ? `<br>Também pode ser: ${ia.alternativas.map(esc).join(", ")}.` : ""}</span></div>` : ""}
         ${ia?.mensagem ? `<div class="aviso aviso-info">${ICONES.info}<span>${esc(ia.mensagem)}</span></div>` : ""}
-        ${ia?.dadosSensiveis ? `<div class="aviso aviso-privacidade" role="alert">${ICONES.escudo}<span><strong>Dados pessoais detectados.</strong> ${esc(ia.avisoPrivacidade)}</span></div>` : ""}
+        ${ia?.dadosSensiveis ? `<div class="aviso aviso-privacidade" role="alert">${ICONES.escudo}<span><strong>Possíveis dados pessoais.</strong> ${esc(ia.avisoPrivacidade)}</span></div>` : ""}
         <div class="campo"><label for="titulo">Título <span aria-hidden="true">*</span></label>
           <input type="text" id="titulo" required maxlength="80" value="${esc(campos.titulo)}" aria-describedby="titulo-erro">
           <div class="erro-campo" id="titulo-erro" hidden>Dê um nome curto ao objeto, ex.: “Garrafa azul”.</div></div>
@@ -450,14 +470,18 @@ function passoLocal() {
       <fieldset class="campo" style="border:0;padding:0;margin:0 0 16px"><legend class="rotulo">Onde o dono poderá retirar? <span aria-hidden="true">*</span></legend>
         <div class="opcoes">${config.pontos.map((p, i) => `<label class="opcao"><input type="radio" name="entrega" value="${p.id}" ${p.id === (c.pontoEntrega || "portaria-inf") ? "checked" : ""}><span><strong>${esc(p.nome)}</strong><small>${esc(p.horario)}</small></span></label>`).join("")}</div></fieldset>
       <div class="painel-bloco">
-        <h2 style="display:flex;gap:8px;align-items:center">${ICONES.escudo.replace('viewBox', 'width="22" height="22" viewBox')} Pergunta de verificação</h2>
-        <p class="texto-suave">Quem disser que é dono precisa responder corretamente antes de receber a localização exata. A resposta nunca é mostrada a ninguém.</p>
-        <div class="campo"><label for="pergunta">Pergunta <span aria-hidden="true">*</span></label>
-          <input type="text" id="pergunta" value="${esc(c.pergunta || c.perguntaSugerida || "")}" placeholder="Ex.: O que está escrito na capa?" aria-describedby="pergunta-dica">
-          <div class="dica" id="pergunta-dica">${c.perguntaSugerida ? "Sugerida pela IA. Pergunte sobre um detalhe que NÃO aparece na foto." : "Pergunte sobre um detalhe que não aparece na foto."}</div></div>
-        <div class="campo"><label for="resposta">Resposta esperada <span aria-hidden="true">*</span></label>
-          <input type="text" id="resposta" value="${esc(c.resposta || "")}" aria-describedby="resposta-erro">
-          <div class="erro-campo" id="resposta-erro" hidden>Informe a pergunta e a resposta.</div></div>
+        <h2 style="display:flex;gap:8px;align-items:center">${ICONES.escudo.replace('viewBox', 'width="22" height="22" viewBox')} Um detalhe que só o dono sabe</h2>
+        <p class="texto-suave">Escolha algo que <strong>não aparece na foto</strong>. Quem disser que o objeto é seu vai precisar contar esse detalhe para ver onde retirar. Ninguém vê o que você escrever aqui.</p>
+        <fieldset style="border:0;padding:0;margin:0 0 12px" ${c.semDetalhe ? "disabled" : ""} id="grupo-detalhe">
+          <legend class="rotulo">Que tipo de detalhe?${rascunho.ia && rascunho.ia.fonte !== "manual" ? ' <span class="chip chip-ia" style="font-size:.72rem">sugerido pela IA</span>' : ""}</legend>
+          <div class="chips" role="radiogroup">${config.tiposDetalhe.map((t) => `<label class="chip chip-opcao"><input type="radio" name="tipo-detalhe" value="${t.id}" ${t.id === (c.tipoDetalhe || "marca") ? "checked" : ""}> ${esc(t.rotulo)}</label>`).join("")}</div>
+          <div class="campo mt" id="campo-pergunta-livre" hidden><label for="pergunta">Qual pergunta o dono deve responder?</label>
+            <input type="text" id="pergunta" value="${esc(c.pergunta || "")}" placeholder="Ex.: Qual o nome do aplicativo na tela de bloqueio?"></div>
+          <div class="campo mt"><label for="resposta" id="rotulo-resposta">Qual é o detalhe?</label>
+            <input type="text" id="resposta" value="${esc(c.resposta || "")}" aria-describedby="resposta-erro">
+            <div class="erro-campo" id="resposta-erro" hidden>Escreva o detalhe ou marque que não encontrou nenhum.</div></div>
+        </fieldset>
+        <label class="opcao"><input type="checkbox" id="sem-detalhe" ${c.semDetalhe ? "checked" : ""}><span><strong>Não encontrei nenhum detalhe assim</strong><small>Quem disser que é dono vai descrever o objeto e você aprova ou recusa o pedido.</small></span></label>
       </div>
       <div class="rodape-acoes">
         <button type="button" class="btn btn-secundario" id="voltar">${ICONES.seta}Voltar</button>
@@ -465,9 +489,20 @@ function passoLocal() {
       </div>
       <div id="erro-envio" aria-live="assertive"></div>
     </form>`;
+  // O rótulo e o exemplo do campo mudam conforme o tipo de detalhe escolhido.
+  const atualizarDetalhe = () => {
+    const tipo = config.tiposDetalhe.find((t) => t.id === $("input[name=tipo-detalhe]:checked")?.value) || config.tiposDetalhe[0];
+    $("#rotulo-resposta").textContent = tipo.campo;
+    $("#resposta").placeholder = tipo.exemplo || "O que o dono deve responder";
+    $("#campo-pergunta-livre").hidden = tipo.id !== "outro";
+  };
+  $$("input[name=tipo-detalhe]").forEach((r) => (r.onchange = atualizarDetalhe));
+  atualizarDetalhe();
+  $("#sem-detalhe").onchange = (e) => { $("#grupo-detalhe").disabled = e.target.checked; };
   const ler = () => Object.assign(c, {
     local: $("#local").value, localDetalhe: $("#localDetalhe").value.trim(), data: $("#data").value || hojeISO(),
-    pontoEntrega: $("input[name=entrega]:checked")?.value, pergunta: $("#pergunta").value.trim(), resposta: $("#resposta").value.trim()
+    pontoEntrega: $("input[name=entrega]:checked")?.value, semDetalhe: $("#sem-detalhe").checked,
+    tipoDetalhe: $("input[name=tipo-detalhe]:checked")?.value, pergunta: $("#pergunta").value.trim(), resposta: $("#resposta").value.trim()
   });
   $("#voltar").onclick = () => { ler(); irPara(1); };
   $("#form-local").onsubmit = async (e) => {
@@ -475,14 +510,14 @@ function passoLocal() {
     let primeiroErro = null;
     const marcar = (id, erroId, invalido) => { $(id).setAttribute("aria-invalid", String(invalido)); $(erroId).hidden = !invalido; if (invalido && !primeiroErro) primeiroErro = $(id); };
     marcar("#local", "#local-erro", !c.local);
-    marcar("#resposta", "#resposta-erro", !c.pergunta || !c.resposta);
+    marcar("#resposta", "#resposta-erro", !c.semDetalhe && (!c.resposta || (c.tipoDetalhe === "outro" && !c.pergunta)));
     if (primeiroErro) return primeiroErro.focus();
     const ia = rascunho.ia;
     const editado = ia && ia.fonte !== "manual" && (ia.titulo !== c.titulo || ia.descricao !== c.descricao || ia.categoria !== c.categoria || ia.cor !== c.cor);
     const btn = $("button[type=submit]", e.target); btn.disabled = true; btn.textContent = "Publicando…";
     try {
       const r = await api("/api/itens", { method: "POST", json: {
-        ...c, foto: rascunho.foto, fotoSensivel: Boolean(ia?.dadosSensiveis), avisoPrivacidade: ia?.avisoPrivacidade || "",
+        ...c, resposta: c.semDetalhe ? "" : c.resposta, foto: rascunho.foto, fotoSensivel: Boolean(ia?.dadosSensiveis), avisoPrivacidade: ia?.avisoPrivacidade || "",
         geradoPorIA: Boolean(ia && ia.fonte !== "manual"), editadoPeloUsuario: Boolean(editado) } });
       rascunho = { passo: 3, criado: r.item, avisados: r.avisados };
       irPara(3);
@@ -499,7 +534,7 @@ function passoConcluido() {
     <div class="card sucesso-grande">
       <div class="selo-ok">${ICONES.check}</div>
       <h1>Obrigado! Seu achado foi publicado</h1>
-      <p class="texto-suave">${avisados ? `<strong>${avisados} ${avisados === 1 ? "pessoa que procurava" : "pessoas que procuravam"} algo parecido ${avisados === 1 ? "foi avisada" : "foram avisadas"} agora.</strong> ` : ""}Você receberá uma notificação quando o dono confirmar a posse.</p>
+      <p class="texto-suave">${avisados ? `<strong>${avisados} ${avisados === 1 ? "pessoa que procurava" : "pessoas que procuravam"} algo parecido ${avisados === 1 ? "foi avisada" : "foram avisadas"} agora.</strong> ` : ""}${criado.temDetalhe ? "Você receberá uma notificação quando o dono acertar o detalhe." : "Você receberá uma notificação quando alguém pedir a devolução, para aprovar ou recusar."}</p>
       ${linhaTempoHTML(criado)}
       <div class="rodape-acoes" style="justify-content:center">
         <a class="btn btn-secundario" href="#/item/${criado.id}">Ver publicação</a>
@@ -541,7 +576,7 @@ async function telaItem(partes) {
           <dt>Encontrado em</dt><dd>${esc(item.localNome)}${item.localDetalhe ? ` · ${esc(item.localDetalhe)}` : ""}</dd>
           <dt>Quando</dt><dd>${quando(item.data)} (${new Date(item.data + "T12:00").toLocaleDateString("pt-BR")})</dd>
           <dt>Categoria</dt><dd>${esc(nomeCategoria(item.categoria))}</dd>
-          <dt>Retirada</dt><dd>${podeVerEntrega ? `${esc(entrega.nome)} <small class="texto-suave">(${esc(entrega.horario)})</small>` : "Liberada após a pergunta de verificação"}</dd>
+          <dt>Retirada</dt><dd>${podeVerEntrega ? `${esc(entrega.nome)} <small class="texto-suave">(${esc(entrega.horario)})</small>` : "Aparece quando o dono for confirmado"}</dd>
           <dt>Cadastrado por</dt><dd>${esc(primeiroNome(item.criadoPor?.nome))} · ${esc(item.criadoPor?.vinculo || "")}</dd>
         </dl>
         <div class="painel-bloco"><h2>Situação</h2>${linhaTempoHTML(item)}</div>
@@ -549,12 +584,32 @@ async function telaItem(partes) {
       </div>
     </div>`;
   const acoes = $("#acoes-item");
-  if (item.status === "encontrado" && !item.souQuemEncontrou) {
+  if (item.status === "encontrado" && !item.souQuemEncontrou && item.meuPedido?.situacao === "pendente") {
+    acoes.innerHTML = `<div class="aviso aviso-info">${ICONES.relogio}<span><strong>Seu pedido foi enviado.</strong> ${esc(primeiroNome(item.criadoPor?.nome))} vai conferir sua descrição; você será avisado no sino.</span></div>`;
+  } else if (item.status === "encontrado" && !item.souQuemEncontrou && item.meuPedido?.situacao === "recusado") {
+    acoes.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>Quem encontrou achou que sua descrição não corresponde ao objeto. Se for mesmo seu, procure o ponto de entrega com um documento.</span></div>`;
+  } else if (item.status === "encontrado" && !item.souQuemEncontrou) {
+    const esgotou = item.temDetalhe && item.tentativasRestantes <= 0;
     acoes.innerHTML = `<button class="btn btn-destaque btn-bloco" id="reivindicar">${ICONES.escudo}É meu! Quero recuperar</button>
-      <p class="texto-suave mt" style="font-size:.88rem">Você responderá uma pergunta sobre um detalhe do objeto. ${item.tentativasRestantes} ${item.tentativasRestantes === 1 ? "tentativa restante" : "tentativas restantes"}.</p>`;
-    $("#reivindicar").onclick = () => (usuario ? modalVerificacao(item) : pedirUsuario());
+      <p class="texto-suave mt" style="font-size:.88rem">${item.temDetalhe && !esgotou
+        ? `Você vai contar um detalhe do objeto que não aparece na foto. ${item.tentativasRestantes} ${item.tentativasRestantes === 1 ? "tentativa restante" : "tentativas restantes"}.`
+        : "Você vai descrever o objeto e quem encontrou confere o pedido."}</p>`;
+    $("#reivindicar").onclick = () => (!usuario ? pedirUsuario() : item.temDetalhe && !esgotou ? modalVerificacao(item) : modalPedido(item));
   } else if (item.status === "encontrado" && item.souQuemEncontrou) {
-    acoes.innerHTML = `<div class="aviso aviso-info">${ICONES.info}<span>Você cadastrou este item. Avisaremos quando alguém responder corretamente a pergunta: <em>“${esc(item.pergunta)}”</em></span></div>`;
+    const pedidos = item.pedidos || [];
+    acoes.innerHTML = pedidos.length
+      ? `<div class="painel-bloco"><h2>Pedidos de devolução (${pedidos.length})</h2>
+          <p class="texto-suave">Compare a descrição com o objeto. Aprove só se tiver certeza.</p>
+          ${pedidos.map((p) => `<div class="linha-lista" style="flex-direction:column;align-items:stretch"><span class="info"><strong>${esc(p.usuario.nome)}</strong> <small class="texto-suave">· ${quando(p.em)}</small><br>“${esc(p.texto)}”</span>
+            <span style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-perigo" data-pedido="${p.id}" data-acao="recusar">Recusar</button><button class="btn btn-primario" data-pedido="${p.id}" data-acao="aprovar">Aprovar</button></span></div>`).join("")}</div>`
+      : `<div class="aviso aviso-info">${ICONES.info}<span>Você cadastrou este item. ${item.temDetalhe
+        ? `Avisaremos quando alguém acertar o detalhe que você informou (pergunta mostrada: <em>“${esc(item.pergunta)}”</em>).`
+        : "Avisaremos quando alguém pedir a devolução, para você aprovar ou recusar."}</span></div>`;
+    $$("[data-pedido]").forEach((b) => (b.onclick = async () => {
+      await api(`/api/itens/${item.id}/pedidos/${b.dataset.pedido}/${b.dataset.acao}`, { method: "POST" });
+      toast(b.dataset.acao === "aprovar" ? "Pedido aprovado. A pessoa foi avisada de onde retirar." : "Pedido recusado.");
+      telaItem(partes);
+    }));
   } else if (item.status === "em_devolucao" && (item.souQuemEncontrou || item.souQuemReivindicou)) {
     acoes.innerHTML = `<div class="aviso aviso-sucesso">${ICONES.check}<span>${item.souQuemReivindicou
       ? `Posse confirmada! Retire em <strong>${esc(entrega.nome)}</strong> (${esc(entrega.horario)}). ${entrega.id === "comigo" ? `Combine com ${esc(primeiroNome(item.criadoPor.nome))} pelas notificações.` : "Leve um documento com foto."}`
@@ -570,8 +625,8 @@ async function telaItem(partes) {
 
 function modalVerificacao(item) {
   const m = abrirModal(`
-    <h2 id="modal-titulo">Confirme que o objeto é seu</h2>
-    <p class="texto-suave">Para proteger o dono verdadeiro, responda a pergunta feita por quem encontrou. Não precisa ser palavra por palavra.</p>
+    <h2 id="modal-titulo">Conte um detalhe do seu objeto</h2>
+    <p class="texto-suave">Quem encontrou guardou um detalhe que não aparece na foto. Responda com suas palavras — não precisa ser igual.</p>
     <form id="form-verif" novalidate>
       <div class="campo"><label for="resp">${esc(item.pergunta)}</label>
         <input type="text" id="resp" autocomplete="off" autofocus aria-describedby="verif-estado"></div>
@@ -596,13 +651,46 @@ function modalVerificacao(item) {
         $("[data-fechar]", m.el).focus();
       } else {
         btn.disabled = false; btn.textContent = "Enviar resposta";
-        estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>A resposta não confere. ${r.tentativasRestantes > 0 ? `Você ainda tem ${r.tentativasRestantes} ${r.tentativasRestantes === 1 ? "tentativa" : "tentativas"}.` : "Suas tentativas acabaram: procure o ponto de entrega com um documento."}</span></div>`;
-        if (r.tentativasRestantes <= 0) btn.disabled = true;
-        $("#resp", m.el).select();
+        if (r.tentativasRestantes > 0) {
+          estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>Não bateu com o detalhe guardado. Você ainda tem ${r.tentativasRestantes} ${r.tentativasRestantes === 1 ? "tentativa" : "tentativas"}.</span></div>`;
+          $("#resp", m.el).select();
+        } else {
+          // Sem tentativas: em vez de bloquear, oferece enviar a descrição para quem encontrou avaliar.
+          m.fechar();
+          modalPedido(item, "Suas tentativas acabaram. Se o objeto for mesmo seu, descreva-o para quem encontrou avaliar.");
+        }
       }
     } catch (err) {
       btn.disabled = false; btn.textContent = "Enviar resposta";
       estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(err.message)}</span></div>`;
+    }
+  };
+}
+
+// Pedido avaliado por quem encontrou (item sem detalhe secreto ou tentativas esgotadas).
+function modalPedido(item, aviso) {
+  const m = abrirModal(`
+    <h2 id="modal-titulo">Descreva seu objeto</h2>
+    ${aviso ? `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(aviso)}</span></div>` : ""}
+    <p class="texto-suave">${esc(primeiroNome(item.criadoPor?.nome))} vai ler sua descrição e aprovar ou recusar. Conte detalhes que <strong>não aparecem na foto</strong>: o que tem dentro, marcas, defeitos, onde você perdeu.</p>
+    <form id="form-pedido" novalidate>
+      <div class="campo"><label for="texto-pedido">Sua descrição</label>
+        <textarea id="texto-pedido" maxlength="500" autofocus aria-describedby="pedido-estado" placeholder="Ex.: tem meu nome bordado na etiqueta e um rasgo no bolso direito"></textarea></div>
+      <div id="pedido-estado" aria-live="assertive"></div>
+      <div class="rodape-acoes"><button type="button" class="btn btn-secundario" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Enviar pedido</button></div>
+    </form>`);
+  $("#form-pedido", m.el).onsubmit = async (e) => {
+    e.preventDefault();
+    const texto = $("#texto-pedido", m.el).value.trim(), estado = $("#pedido-estado", m.el);
+    try {
+      await api(`/api/itens/${item.id}/pedidos`, { method: "POST", json: { texto } });
+      m.fechar();
+      toast("Pedido enviado! Você será avisado quando for avaliado.");
+      rotear();
+    } catch (err) {
+      estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(err.message)}</span></div>`;
+      $("#texto-pedido", m.el).focus();
     }
   };
 }
@@ -665,11 +753,11 @@ async function telaPainel(_p, params) {
   const faixa = $("#faixa-modo");
   if (config.modoIA === "estatico") {
     faixa.hidden = false;
-    faixa.innerHTML = `Versão de demonstração online: a IA é simulada e os dados ficam só neste navegador. Troque de usuário no avatar para simular quem encontrou e quem perdeu. <button type="button" class="link-faixa" id="restaurar">Restaurar exemplos</button>`;
+    faixa.innerHTML = `Demonstração online: a análise de fotos usa um modelo aberto que roda no seu navegador e <strong>os dados ficam só neste navegador</strong> — outras pessoas não veem o que você cadastra. Troque de usuário no avatar para simular os dois lados. <button type="button" class="link-faixa" id="restaurar">Restaurar exemplos</button>`;
     $("#restaurar").onclick = async () => { await api("/api/reset", { method: "POST" }); armazenamento.sessao("achados.rascunho", null); location.hash = "#/"; location.reload(); };
   } else if (config.modoIA !== "claude") {
     faixa.hidden = false;
-    faixa.textContent = "Modo demonstração: a IA está simulada com regras locais. Configure ANTHROPIC_API_KEY para usar o Claude.";
+    faixa.textContent = "Modo sem chave de API: fotos analisadas por um modelo aberto no navegador e busca por regras locais. Configure ANTHROPIC_API_KEY para usar o Claude.";
   }
   atualizarCabecalho();
   window.addEventListener("hashchange", rotear);

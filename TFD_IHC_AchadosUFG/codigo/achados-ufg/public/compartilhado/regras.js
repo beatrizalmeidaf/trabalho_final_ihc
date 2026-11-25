@@ -4,48 +4,12 @@
 import { CATEGORIAS, CORES, LOCAIS, normalizar } from "./catalogo.js";
 
 // ---------------------------------------------------------------- análise de foto
-// Análises pré-definidas para as fotos de exemplo da pasta demo-fotos/ (reconhecidas pelo NOME do arquivo).
-export const ANALISES_DEMO = {
-  "fone-branco": {
-    titulo: "Estojo de fone sem fio branco",
-    descricao: "Estojo de carregamento branco de fones sem fio, aberto, com os dois fones encaixados. Tampa sem capinha.",
-    categoria: "eletronico", cor: "branco", tags: ["fone", "sem fio", "estojo", "branco", "bluetooth"],
-    dadosSensiveis: false, avisoPrivacidade: "",
-    perguntaSugerida: "O que está gravado na parte de trás do estojo?", confianca: 0.9
-  },
-  "chaves": {
-    titulo: "Molho de chaves com chaveiro azul",
-    descricao: "Três chaves prateadas em uma argola, com chaveiro retangular azul e etiqueta clara escrita \"Safe Driving\".",
-    categoria: "chave", cor: "azul", tags: ["chaves", "chaveiro", "argola", "azul"],
-    dadosSensiveis: false, avisoPrivacidade: "",
-    perguntaSugerida: "Quantas chaves há no molho e que cor tem a cabeça de cada uma?", confianca: 0.88
-  },
-  "carteirinha": {
-    titulo: "Carteirinha estudantil da UFG",
-    descricao: "Cartão de identificação estudantil da UFG em porta-cartão transparente com cordão verde.",
-    categoria: "documento", cor: "verde", tags: ["carteirinha", "cartão", "ufg", "cordão", "documento"],
-    dadosSensiveis: true,
-    avisoPrivacidade: "A foto mostra nome, foto do rosto e número de matrícula. A imagem ficará desfocada para o público e esses dados não aparecem na descrição.",
-    perguntaSugerida: "Qual é o curso impresso na carteirinha?", confianca: 0.88
-  },
-  "garrafa-azul": {
-    titulo: "Garrafa com capa de silicone azul",
-    descricao: "Garrafa de vidro com capa de silicone azul-royal com uma janela vertical e tampa preta com alça.",
-    categoria: "garrafa", cor: "azul", tags: ["garrafa", "vidro", "silicone", "azul", "tampa preta"],
-    dadosSensiveis: false, avisoPrivacidade: "",
-    perguntaSugerida: "O que está escrito ou desenhado no fundo da garrafa?", confianca: 0.86
-  }
-};
-
-export function analiseDemonstracao(nomeArquivo = "") {
-  const n = normalizar(nomeArquivo);
-  const chave = Object.keys(ANALISES_DEMO).find((k) => n.includes(k));
-  if (chave) return { ...ANALISES_DEMO[chave], fonte: "demonstracao" };
+// Sem Claude, a análise da foto é feita no navegador pelo modelo aberto CLIP (public/ia-navegador.js).
+// Este objeto sinaliza à interface que ela deve rodar esse modelo (ou pedir preenchimento manual).
+export function analiseManual() {
   return {
     titulo: "", descricao: "", categoria: "outro", cor: "colorido", tags: [],
-    dadosSensiveis: false, avisoPrivacidade: "", perguntaSugerida: "", confianca: 0,
-    fonte: "manual",
-    mensagem: "No modo demonstração a IA só reconhece as fotos de exemplo (pasta demo-fotos). Preencha os campos manualmente."
+    dadosSensiveis: false, avisoPrivacidade: "", tipoDetalhe: "marca", confianca: 0, fonte: "manual"
   };
 }
 
@@ -131,10 +95,23 @@ export function buscarLocal(consulta, itens) {
 }
 
 // ---------------------------------------------------------------- verificação de posse
+// Palavras que descrevem ONDE/COMO está o detalhe, e não o detalhe em si ("gravada atrás", "no fundo").
+// Elas são ignoradas para que "estrela" confira com "uma estrela gravada atrás".
+const PALAVRAS_DE_POSICAO = new Set(("atras frente fundo lado dentro fora cima baixo parte canto meio tampa " +
+  "escrito escrita escritos gravado gravada desenhado desenhada colado colada tem tinha esta estao objeto").split(" "));
+
+const NUMEROS = { dois: "2", duas: "2", tres: "3", quatro: "4", cinco: "5", seis: "6", sete: "7", oito: "8", nove: "9", dez: "10" };
+
 export function compararLocal(esperada, dada) {
-  const tok = (s) => new Set(normalizar(s).split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !STOPWORDS.has(w)));
+  const tok = (s) => new Set(normalizar(s).replace(/(\d)([a-z])/g, "$1 $2").replace(/([a-z])(\d)/g, "$1 $2").split(/[^a-z0-9]+/)
+    .map((w) => NUMEROS[w] ?? w)
+    .filter((w) => /\d/.test(w) || (w.length > 1 && !STOPWORDS.has(w) && !PALAVRAS_DE_POSICAO.has(w)))
+    .map((w) => (w.length > 4 ? w.replace(/s$/, "") : w))); // plural simples
   const a = tok(esperada), b = tok(dada);
   if (!a.size || !b.size) return false;
+  // Números (quantidades, potências, capacidades) precisam bater exatamente.
+  const numerosA = [...a].filter((w) => /\d/.test(w));
+  if (numerosA.length && !numerosA.every((n) => b.has(n))) return false;
   const inter = [...a].filter((w) => b.has(w)).length;
-  return inter / a.size >= 0.6;
+  return inter / a.size >= 0.5; // pelo menos metade das palavras importantes do detalhe
 }

@@ -1,7 +1,7 @@
 // Núcleo da API do Achados UFG — independente de ambiente.
 // O servidor Node (server.js) e a versão estática do GitHub Pages (public/modo-estatico.js)
 // usam exatamente estas regras; só mudam o armazenamento e a IA injetados.
-import { CATEGORIAS, CORES, LOCAIS, PONTOS_ENTREGA, normalizar, nomeLocal, pontoEntrega } from "./catalogo.js";
+import { CATEGORIAS, CORES, LOCAIS, PONTOS_ENTREGA, TIPOS_DETALHE, normalizar, nomeLocal, pontoEntrega, perguntaDoDetalhe } from "./catalogo.js";
 import { ordenarLocal, pontuarLocal } from "./regras.js";
 
 export const MAX_TENTATIVAS = 3;
@@ -44,11 +44,16 @@ export function criarNucleo({ banco, ia }) {
 
   // Remove do item tudo o que não pode chegar ao navegador de terceiros.
   function publico(item, u) {
-    const { resposta, tentativas, ...resto } = item;
+    const { resposta, tentativas, pedidos = [], ...resto } = item;
     const ehDono = Boolean(u && item.criadoPor?.id === u.id);
     const reivindicou = Boolean(u && item.reivindicadoPor?.id === u.id);
+    const meu = u ? pedidos.find((p) => p.usuario.id === u.id) : null;
     return {
       ...resto,
+      temDetalhe: Boolean(item.pergunta),
+      // Quem encontrou vê os pedidos pendentes; os demais só veem a situação do próprio pedido.
+      pedidos: ehDono ? pedidos.filter((p) => p.situacao === "pendente") : undefined,
+      meuPedido: meu ? { situacao: meu.situacao, em: meu.em } : null,
       localNome: nomeLocal(item.local),
       entrega: pontoEntrega(item.pontoEntrega),
       souQuemEncontrou: ehDono,
@@ -64,7 +69,7 @@ export function criarNucleo({ banco, ia }) {
 
   const rotas = [
     ["GET", /^\/api\/config$/, () => ({
-      modoIA: ia.modo(), categorias: CATEGORIAS.map(({ id, nome }) => ({ id, nome })), cores: CORES.map((c) => c.id), locais: LOCAIS, pontos: PONTOS_ENTREGA
+      modoIA: ia.modo(), categorias: CATEGORIAS.map(({ id, nome }) => ({ id, nome })), cores: CORES.map((c) => c.id), locais: LOCAIS, pontos: PONTOS_ENTREGA, tiposDetalhe: TIPOS_DETALHE
     })],
 
     ["GET", /^\/api\/itens$/, ({ u, consulta }) => banco.carregar().itens
@@ -76,7 +81,11 @@ export function criarNucleo({ banco, ia }) {
 
     ["POST", /^\/api\/itens$/, ({ u, corpo: b }) => {
       exigir(u);
-      const faltando = ["titulo", "categoria", "local", "data", "pontoEntrega", "pergunta", "resposta"].filter((k) => !String(b[k] ?? "").trim());
+      const faltando = ["titulo", "categoria", "local", "data", "pontoEntrega"].filter((k) => !String(b[k] ?? "").trim());
+      // Detalhe secreto é opcional; sem ele, quem encontrou avalia os pedidos de devolução.
+      const resposta = String(b.resposta ?? "").trim();
+      const pergunta = resposta ? perguntaDoDetalhe(b.tipoDetalhe, b.pergunta) : "";
+      if (resposta && !pergunta) faltando.push("pergunta");
       if (faltando.length) throw new ErroApi(400, "Preencha os campos obrigatórios.", { campos: faltando });
       const db = banco.carregar();
       const agora = new Date().toISOString();
@@ -86,7 +95,7 @@ export function criarNucleo({ banco, ia }) {
         categoria: b.categoria, cor: b.cor || "colorido", tags: Array.isArray(b.tags) ? b.tags.slice(0, 8) : [],
         local: b.local, localDetalhe: String(b.localDetalhe || "").slice(0, 80), data: b.data, foto: b.foto || null,
         fotoSensivel: Boolean(b.fotoSensivel), avisoPrivacidade: b.avisoPrivacidade || "", pontoEntrega: b.pontoEntrega,
-        pergunta: b.pergunta.trim(), resposta: b.resposta.trim(),
+        tipoDetalhe: resposta ? b.tipoDetalhe : null, pergunta: pergunta || null, resposta: resposta || null, pedidos: [],
         geradoPorIA: Boolean(b.geradoPorIA), editadoPeloUsuario: Boolean(b.editadoPeloUsuario),
         status: "encontrado", criadoPor: { id: u.id, nome: u.nome, vinculo: u.vinculo }, criadoEm: agora,
         historico: [{ status: "encontrado", em: agora, nota: `Cadastrado por ${u.nome}` }], tentativas: {}
@@ -110,6 +119,8 @@ export function criarNucleo({ banco, ia }) {
       const item = achar(db, m[1]);
       if (item.status !== "encontrado") throw new ErroApi(409, "Este item já está em processo de devolução.");
       if (item.criadoPor?.id === u.id) throw new ErroApi(400, "Você cadastrou este item.");
+      if (!item.pergunta) throw new ErroApi(400, "Este item não tem detalhe secreto: envie um pedido para quem encontrou.");
+      item.tentativas ??= {};
       const usadas = item.tentativas[u.id] ?? 0;
       if (usadas >= MAX_TENTATIVAS) throw new ErroApi(429, "Você atingiu o limite de tentativas. Procure o ponto de entrega com um documento.");
       const dada = String(corpo?.resposta || "").trim();
@@ -126,6 +137,47 @@ export function criarNucleo({ banco, ia }) {
       notificar(db, item.criadoPor.id, `${u.nome} respondeu corretamente a pergunta de verificação de "${item.titulo}". Combine a entrega ou aguarde a retirada.`, item.id, "reivindicacao");
       banco.salvar();
       return { ok: true, fonte, item: publico(item, u) };
+    }],
+
+    // Pedido de devolução avaliado por quem encontrou (item sem detalhe secreto ou tentativas esgotadas).
+    ["POST", /^\/api\/itens\/([\w-]+)\/pedidos$/, ({ u, m, corpo }) => {
+      exigir(u);
+      const db = banco.carregar();
+      const item = achar(db, m[1]);
+      if (item.status !== "encontrado") throw new ErroApi(409, "Este item já está em processo de devolução.");
+      if (item.criadoPor?.id === u.id) throw new ErroApi(400, "Você cadastrou este item.");
+      const texto = String(corpo?.texto || "").trim().slice(0, 500);
+      if (texto.length < 10) throw new ErroApi(400, "Descreva seu objeto com um pouco mais de detalhe.");
+      if (item.pergunta && (item.tentativas?.[u.id] ?? 0) < MAX_TENTATIVAS) throw new ErroApi(400, "Responda primeiro à pergunta sobre o detalhe do objeto.");
+      item.pedidos ??= [];
+      if (item.pedidos.some((p) => p.usuario.id === u.id && p.situacao === "pendente")) throw new ErroApi(409, "Você já enviou um pedido para este item.");
+      item.pedidos.push({ id: banco.novoId("ped"), usuario: { id: u.id, nome: u.nome }, texto, situacao: "pendente", em: new Date().toISOString() });
+      notificar(db, item.criadoPor.id, `${u.nome} pediu a devolução de "${item.titulo}". Abra o item para aprovar ou recusar.`, item.id, "pedido");
+      banco.salvar();
+      return { status: 201, dados: { item: publico(item, u) } };
+    }],
+
+    ["POST", /^\/api\/itens\/([\w-]+)\/pedidos\/([\w-]+)\/(aprovar|recusar)$/, ({ u, m }) => {
+      exigir(u);
+      const db = banco.carregar();
+      const item = achar(db, m[1]);
+      if (item.criadoPor?.id !== u.id) throw new ErroApi(403, "Só quem encontrou pode avaliar os pedidos.");
+      const pedido = (item.pedidos || []).find((p) => p.id === m[2] && p.situacao === "pendente");
+      if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+      if (m[3] === "recusar") {
+        pedido.situacao = "recusado";
+        notificar(db, pedido.usuario.id, `Quem encontrou "${item.titulo}" achou que a sua descrição não corresponde ao objeto. Se for mesmo seu, procure o ponto de entrega com um documento.`, item.id, "recusado");
+      } else {
+        if (item.status !== "encontrado") throw new ErroApi(409, "Este item já está em processo de devolução.");
+        pedido.situacao = "aprovado";
+        item.pedidos.filter((p) => p.situacao === "pendente").forEach((p) => { p.situacao = "recusado"; });
+        item.status = "em_devolucao";
+        item.reivindicadoPor = { id: pedido.usuario.id, nome: pedido.usuario.nome };
+        item.historico.push({ status: "em_devolucao", em: new Date().toISOString(), nota: `Pedido de ${pedido.usuario.nome} aprovado por ${u.nome}` });
+        notificar(db, pedido.usuario.id, `Seu pedido de "${item.titulo}" foi aprovado! Abra o item para ver onde retirar.`, item.id, "aprovado");
+      }
+      banco.salvar();
+      return { item: publico(item, u) };
     }],
 
     ["POST", /^\/api\/itens\/([\w-]+)\/devolver$/, ({ u, m }) => {
