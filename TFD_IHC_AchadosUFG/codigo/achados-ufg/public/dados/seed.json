@@ -1,0 +1,124 @@
+{
+  "itens": [
+    {
+      "id": "itm_garrafa01", "titulo": "Garrafa com capa de silicone azul",
+      "descricao": "Garrafa de vidro com capa de silicone azul-royal com uma janela vertical e tampa preta com alça.",
+      "categoria": "garrafa", "cor": "azul", "tags": ["garrafa", "vidro", "silicone", "capa", "azul"],
+      "local": "ru", "localDetalhe": "mesa perto da saída", "diasAtras": 1, "foto": "demo-fotos/garrafa-azul.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "portaria-reitoria",
+      "pergunta": "O que está desenhado no fundo da garrafa?", "resposta": "um coração",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "encontrado",
+      "criadoPor": { "id": "joao-pedro", "nome": "João Pedro", "vinculo": "Servidor(a)" }
+    },
+    {
+      "id": "itm_squeeze01", "titulo": "Squeeze verde com canudo",
+      "descricao": "Squeeze plástico verde translúcido com tampa de bico e canudo interno.",
+      "categoria": "garrafa", "cor": "verde", "tags": ["squeeze", "garrafa", "plástico", "canudo"],
+      "local": "caa", "localDetalhe": "sala 204", "diasAtras": 4, "foto": "demo-fotos/squeeze.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "secretaria-caa",
+      "pergunta": "Qual é a capacidade marcada no squeeze?", "resposta": "500 ml",
+      "geradoPorIA": true, "editadoPeloUsuario": true, "status": "encontrado",
+      "criadoPor": { "id": "luiza-m", "nome": "Luiza M.", "vinculo": "Estudante" }
+    },
+    {
+      "id": "itm_garrafa02", "titulo": "Garrafa de alumínio vermelha",
+      "descricao": "Garrafa de alumínio vermelha com mosquetão na tampa e estampa branca \"Metro Rapid Ride\".",
+      "categoria": "garrafa", "cor": "vermelho", "tags": ["garrafa", "alumínio", "vermelha", "mosquetão"],
+      "local": "bc", "localDetalhe": "2º andar, cabines de estudo", "diasAtras": 1, "foto": "demo-fotos/garrafa-vermelha.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "bc-achados",
+      "pergunta": "O que está gravado no fundo da garrafa?", "resposta": "iniciais RM",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "encontrado",
+      "criadoPor": { "id": "luiza-m", "nome": "Luiza M.", "vinculo": "Estudante" }
+    },
+    {
+      "id": "itm_caderno01", "titulo": "Caderno espiral de capa preta",
+      "descricao": "Caderno espiral de capa preta com etiqueta colada na frente e uma pequena etiqueta branca em branco.",
+      "categoria": "material", "cor": "preto", "tags": ["caderno", "espiral", "preto", "etiqueta"],
+      "local": "cab", "localDetalhe": "sala 105", "diasAtras": 2, "foto": "demo-fotos/caderno.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "secretaria-caa",
+      "pergunta": "O que está escrito na primeira página?", "resposta": "Cálculo 2 turma B",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "encontrado",
+      "criadoPor": { "id": "joao-pedro", "nome": "João Pedro", "vinculo": "Servidor(a)" }
+    },
+    {
+      "id": "itm_chuva01", "titulo": "Guarda-chuva preto dobrável",
+      "descricao": "Guarda-chuva preto dobrável, cabo reto preto com alça de pulso.",
+      "categoria": "guarda-chuva", "cor": "preto", "tags": ["guarda-chuva", "preto", "dobrável"],
+      "local": "inf", "localDetalhe": "corredor dos laboratórios", "diasAtras": 3, "foto": "demo-fotos/guarda-chuva.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "portaria-inf",
+      "pergunta": "Qual a marca escrita na alça de velcro?", "resposta": "Fazzoletti",
+      "geradoPorIA": false, "editadoPeloUsuario": false, "status": "encontrado",
+      "criadoPor": { "id": "portaria-inf", "nome": "Portaria INF", "vinculo": "Setor" }
+    },
+    {
+      "id": "itm_oculos01", "titulo": "Óculos de grau armação dourada",
+      "descricao": "Óculos de grau com armação metálica dourada, lentes ovais e ponteiras das hastes marrons.",
+      "categoria": "vestuario", "cor": "amarelo", "tags": ["óculos", "grau", "armação", "dourada"],
+      "local": "bc", "localDetalhe": "mesa do térreo", "diasAtras": 6, "foto": "demo-fotos/oculos.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "bc-achados",
+      "pergunta": "Em que estojo ou capinha os óculos estavam?", "resposta": "sem estojo",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "encontrado",
+      "criadoPor": { "id": "bc-atendimento", "nome": "Atendimento BC", "vinculo": "Setor" }
+    },
+    {
+      "id": "itm_moletom01", "titulo": "Moletom preto estampado com capuz",
+      "descricao": "Moletom preto desbotado com capuz, estampa de chamas na frente e estrelas brancas nas mangas.",
+      "categoria": "vestuario", "cor": "preto", "tags": ["moletom", "casaco", "capuz", "estampado"],
+      "local": "ime", "localDetalhe": "auditório", "diasAtras": 2, "foto": "demo-fotos/moletom.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "comigo",
+      "pergunta": "Qual o tamanho na etiqueta interna?", "resposta": "G",
+      "geradoPorIA": true, "editadoPeloUsuario": true, "status": "encontrado",
+      "criadoPor": { "id": "luiza-m", "nome": "Luiza M.", "vinculo": "Estudante" }
+    },
+    {
+      "id": "itm_carreg01", "titulo": "Carregador portátil preto com cabo",
+      "descricao": "Bateria/carregador portátil preto, retangular, com cabo USB preto enrolado.",
+      "categoria": "eletronico", "cor": "preto", "tags": ["carregador", "power bank", "cabo", "usb"],
+      "local": "inf", "localDetalhe": "laboratório L3", "diasAtras": 0, "foto": "demo-fotos/carregador.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "portaria-inf",
+      "pergunta": "Qual a capacidade escrita no carregador?", "resposta": "10000 mAh",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "encontrado",
+      "criadoPor": { "id": "portaria-inf", "nome": "Portaria INF", "vinculo": "Setor" }
+    },
+    {
+      "id": "itm_carteira01", "titulo": "Carteira de couro preta e marrom",
+      "descricao": "Carteira de couro preta com faixa marrom em L na lateral e costura aparente.",
+      "categoria": "carteira", "cor": "preto", "tags": ["carteira", "couro", "preta", "marrom"],
+      "local": "ru", "localDetalhe": "fila do caixa", "diasAtras": 5, "foto": "demo-fotos/carteira.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "portaria-reitoria",
+      "pergunta": "Quais documentos estão dentro da carteira?", "resposta": "RG e cartão do banco",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "encontrado",
+      "criadoPor": { "id": "joao-pedro", "nome": "João Pedro", "vinculo": "Servidor(a)" }
+    },
+    {
+      "id": "itm_calc01", "titulo": "Calculadora científica Casio preta",
+      "descricao": "Calculadora científica Casio preta, modelo com visor de duas linhas e teclas coloridas.",
+      "categoria": "eletronico", "cor": "preto", "tags": ["calculadora", "científica", "casio"],
+      "local": "ime", "localDetalhe": "sala 12", "diasAtras": 3, "foto": "demo-fotos/calculadora.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "comigo",
+      "pergunta": "Que nome está escrito atrás?", "resposta": "Rafael",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "em_devolucao",
+      "reivindicadoPor": { "id": "rafael-s", "nome": "Rafael S." },
+      "criadoPor": { "id": "luiza-m", "nome": "Luiza M.", "vinculo": "Estudante" }
+    },
+    {
+      "id": "itm_mochila01", "titulo": "Mochila preta com logo verde-limão",
+      "descricao": "Mochila preta com logo verde-limão na frente, bolso frontal com zíper e puxadores amarelos.",
+      "categoria": "mochila", "cor": "preto", "tags": ["mochila", "preta", "logo"],
+      "local": "reitoria", "localDetalhe": "Centro de Cultura e Eventos", "diasAtras": 9, "foto": "demo-fotos/mochila.jpg",
+      "fotoSensivel": false, "avisoPrivacidade": "", "pontoEntrega": "portaria-reitoria",
+      "pergunta": "O que havia no bolso frontal?", "resposta": "fone com fio",
+      "geradoPorIA": true, "editadoPeloUsuario": false, "status": "devolvido",
+      "reivindicadoPor": { "id": "carla-r", "nome": "Carla R." },
+      "criadoPor": { "id": "joao-pedro", "nome": "João Pedro", "vinculo": "Servidor(a)" }
+    }
+  ],
+  "alertas": [
+    {
+      "id": "alr_demo01", "usuario": "ana-clara", "consulta": "fone sem fio branco",
+      "filtros": { "categoria": "eletronico", "cor": "branco", "local": null, "periodoDias": null, "palavras": ["fio"] },
+      "ativo": true, "criadoEm": "2026-11-20T10:00:00.000Z"
+    }
+  ],
+  "notificacoes": []
+}

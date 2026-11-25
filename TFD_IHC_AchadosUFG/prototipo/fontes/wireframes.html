@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Wireframes Achados UFG</title>
+<style>
+  body { margin: 0; padding: 32px; background: #fff; font-family: "Comic Sans MS", "Segoe Print", "Segoe UI", sans-serif; color: #333; }
+  h1 { font-family: "Segoe UI", sans-serif; font-size: 22px; margin: 0 0 20px; }
+  .linha { display: flex; gap: 36px; flex-wrap: wrap; }
+  .tel { width: 250px; }
+  .tel h2 { font-family: "Segoe UI", sans-serif; font-size: 14px; text-align: center; margin: 10px 0 0; color: #555; }
+  .tela { width: 250px; height: 500px; border: 3px solid #333; border-radius: 28px; padding: 14px 12px; box-sizing: border-box; position: relative; overflow: hidden; background: #fcfcfc; }
+  .b { border: 2px solid #777; border-radius: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #666; text-align: center; background: #fff; }
+  .x { background: repeating-linear-gradient(45deg,#eee,#eee 6px,#f8f8f8 6px,#f8f8f8 12px); }
+  .t { height: 8px; background: #bbb; border-radius: 4px; margin: 6px 0; }
+  .t.s { width: 60%; } .t.m { width: 80%; }
+  .esc { background: #ddd; }
+  .nav { position: absolute; left: 0; right: 0; bottom: 0; height: 44px; border-top: 2px solid #777; display: flex; justify-content: space-around; align-items: center; font-size: 10px; background: #fff; }
+  .row { display: flex; gap: 8px; } .row > * { flex: 1; }
+  .nota { font-family: "Segoe UI", sans-serif; font-size: 11px; color: #a33; margin-top: 4px; }
+  .pill { display: inline-block; border: 2px solid #777; border-radius: 99px; padding: 2px 8px; font-size: 10px; margin: 2px; }
+</style></head><body>
+<h1>Wireframes de baixa fidelidade — Achados UFG (versão mobile)</h1>
+<div class="linha">
+  <div class="tel"><div class="tela">
+    <div class="b esc" style="height:32px">☰ LOGO · 🔔 · 👤</div>
+    <div class="b x" style="height:120px;flex-direction:column">Perdeu ou encontrou algo?<br><br>
+      <div class="row" style="width:90%"><div class="b" style="height:34px;margin:0">🔍 Perdi</div><div class="b" style="height:34px;margin:0">📷 Encontrei</div></div></div>
+    <div class="t s"></div>
+    <div class="row"><div class="b x" style="height:90px">foto</div><div class="b x" style="height:90px">foto</div></div>
+    <div class="row"><div class="b x" style="height:90px">foto</div><div class="b x" style="height:90px">foto</div></div>
+    <div class="nav"><span>Início</span><span>Perdi</span><span>[Encontrei]</span><span>Painel</span></div>
+  </div><h2>1. Início</h2><div class="nota">2 ações principais acima da dobra</div></div>
+
+  <div class="tel"><div class="tela">
+    <div class="b esc" style="height:32px">LOGO · 🔔 · 👤</div>
+    <div class="t m"></div>
+    <div class="b" style="height:54px">"perdi uma garrafa azul…" [Buscar]</div>
+    <div style="margin-bottom:6px"><span class="pill">garrafa ×</span><span class="pill">azul ×</span><span class="pill">RU ×</span></div>
+    <div class="b" style="height:62px;justify-content:flex-start;gap:6px;padding:4px"><div class="b x" style="width:60px;height:50px;margin:0"></div><div style="flex:1"><div class="t"></div><div class="t s"></div><div class="t" style="width:90%;background:#8c8"></div></div></div>
+    <div class="b" style="height:62px;justify-content:flex-start;gap:6px;padding:4px"><div class="b x" style="width:60px;height:50px;margin:0"></div><div style="flex:1"><div class="t"></div><div class="t s"></div><div class="t" style="width:60%;background:#8c8"></div></div></div>
+    <div class="b" style="height:36px">[ 🔔 Avise-me ]</div>
+    <div class="nav"><span>Início</span><span>[Perdi]</span><span>Encontrei</span><span>Painel</span></div>
+  </div><h2>2. Busca em linguagem natural</h2><div class="nota">filtros interpretados e removíveis + % de compatibilidade</div></div>
+
+  <div class="tel"><div class="tela">
+    <div class="b esc" style="height:32px">LOGO · 🔔 · 👤</div>
+    <div class="row" style="margin-bottom:8px"><span class="pill">① Foto</span><span class="pill">② Descr.</span><span class="pill">③ Local</span></div>
+    <div class="b" style="height:150px;border-style:dashed">📷<br>Tirar foto / galeria</div>
+    <div class="b" style="height:60px">⚠ Dica de privacidade</div>
+    <div class="b" style="height:30px;border:0">Continuar sem foto</div>
+    <div class="nav"><span>Início</span><span>Perdi</span><span>[Encontrei]</span><span>Painel</span></div>
+  </div><h2>3. Cadastro — foto</h2><div class="nota">assistente em 3 etapas com progresso</div></div>
+
+  <div class="tel"><div class="tela">
+    <div class="b esc" style="height:32px">LOGO · 🔔 · 👤</div>
+    <div class="b x" style="height:100px">foto</div>
+    <div class="b" style="height:40px;background:#eee">✨ Sugestão da IA — revise</div>
+    <div class="t s"></div><div class="b" style="height:30px">Título (preenchido)</div>
+    <div class="t s"></div><div class="b" style="height:54px">Descrição (preenchida)</div>
+    <div class="row"><div class="b" style="height:30px">Categoria ▾</div><div class="b" style="height:30px">Cor ▾</div></div>
+    <div class="row"><div class="b" style="height:34px">Voltar</div><div class="b esc" style="height:34px">Continuar</div></div>
+  </div><h2>4. Cadastro — revisão da IA</h2><div class="nota">usuário mantém o controle sobre a IA</div></div>
+
+  <div class="tel"><div class="tela">
+    <div class="b esc" style="height:32px">LOGO · 🔔 · 👤</div>
+    <div class="b x" style="height:120px">foto (desfocada se houver dado pessoal)</div>
+    <div class="t m"></div><div class="t"></div><div class="t s"></div>
+    <div class="b" style="height:50px">● ─── ○ ─── ○<br>Encontrado · Confirmado · Devolvido</div>
+    <div class="b esc" style="height:38px">É MEU! QUERO RECUPERAR</div>
+    <div class="b" style="height:110px;position:absolute;left:12px;right:12px;bottom:12px;background:#f2f2f2;flex-direction:column">Pergunta de verificação<br><div class="b" style="width:85%;height:26px;margin:6px 0">resposta</div>[Enviar]</div>
+  </div><h2>5. Detalhe + verificação</h2><div class="nota">status visível + checagem de posse</div></div>
+
+  <div class="tel"><div class="tela">
+    <div class="b esc" style="height:32px">LOGO · 🔔(1) · 👤</div>
+    <div class="t s"></div>
+    <div class="row"><span class="pill">Notificações</span><span class="pill">Registros</span><span class="pill">Alertas</span></div>
+    <div class="b" style="height:56px;background:#eee">● Item compatível com seu alerta…</div>
+    <div class="b" style="height:56px">○ Devolução concluída…</div>
+    <div class="b" style="height:56px">"fone branco…" [Excluir]</div>
+    <div class="b" style="height:30px;background:#333;color:#fff">Alerta excluído — DESFAZER</div>
+    <div class="nav"><span>Início</span><span>Perdi</span><span>Encontrei</span><span>[Painel]</span></div>
+  </div><h2>6. Painel do usuário</h2><div class="nota">notificações, registros e alertas (com desfazer)</div></div>
+</div>
+</body></html>

@@ -1,0 +1,22 @@
+{
+  "name": "achados-ufg",
+  "version": "1.0.0",
+  "description": "Achados UFG — aplicação web de achados e perdidos com IA para a comunidade da Universidade Federal de Goiás (Trabalho Final de IHC).",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "reset": "node scripts/reset-db.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "Beatriz Almeida Felicio, Beatriz Silva Andrade, Kamilla Jordana Regosino de Moura",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
+    "multer": "^1.4.5-lts.1"
+  }
+}

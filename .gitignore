@@ -1,0 +1,9 @@
+node_modules/
+.env
+TFD_IHC_AchadosUFG/codigo/achados-ufg/data/db.json
+TFD_IHC_AchadosUFG/codigo/achados-ufg/data/*.tmp
+TFD_IHC_AchadosUFG/codigo/achados-ufg/uploads/
+*.zip
+~$*
+prompt.txt
+slide_mestre_INF.pptx
