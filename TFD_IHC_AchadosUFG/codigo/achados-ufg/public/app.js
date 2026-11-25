@@ -17,7 +17,10 @@ const armazenamento = {
   }
 };
 
-let usuario = armazenamento.ler("achados.usuario");
+// Usuário por ABA (sessionStorage): permite uma aba como "quem encontrou" e outra como "quem perdeu".
+// O localStorage guarda só o último nome usado, para preencher abas novas.
+const usuarioDaAba = armazenamento.sessao("achados.usuario");
+let usuario = usuarioDaAba || armazenamento.ler("achados.usuario");
 let config = null;
 let apiEstatica = null; // preenchida quando não há servidor (GitHub Pages)
 
@@ -104,9 +107,10 @@ let focoAnterior = null;
 function abrirModal(html, { aoFechar, fechavel = true } = {}) {
   focoAnterior = document.activeElement;
   const raiz = $("#modal-raiz");
+  document.body.classList.add("com-modal"); // toasts vão para o topo e não cobrem os botões do diálogo
   raiz.innerHTML = `<div class="modal-fundo"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">${html}</div></div>`;
   const fundo = $(".modal-fundo", raiz);
-  const fechar = () => { raiz.innerHTML = ""; document.removeEventListener("keydown", tecla); aoFechar?.(); focoAnterior?.focus?.(); };
+  const fechar = () => { raiz.innerHTML = ""; document.body.classList.remove("com-modal"); document.removeEventListener("keydown", tecla); aoFechar?.(); focoAnterior?.focus?.(); };
   const tecla = (e) => {
     if (e.key === "Escape" && fechavel) fechar();
     if (e.key === "Tab") { // mantém o foco dentro do diálogo
@@ -119,15 +123,17 @@ function abrirModal(html, { aoFechar, fechavel = true } = {}) {
   document.addEventListener("keydown", tecla);
   if (fechavel) fundo.addEventListener("click", (e) => { if (e.target === fundo) fechar(); });
   $$("[data-fechar]", fundo).forEach((b) => (b.onclick = fechar));
-  setTimeout(() => ($("[autofocus]", fundo) || $("input, button", fundo))?.focus(), 30);
+  // Foco inicial no primeiro campo do diálogo (ou no primeiro botão, se não houver campo).
+  const primeiro = $("[autofocus]", fundo) || $("textarea, input, select", fundo) || $("button", fundo);
+  primeiro?.focus();
   return { el: fundo, fechar };
 }
 
 // ------------------------------------------------------------------ usuário (login simulado)
 function pedirUsuario(obrigatorio = !usuario) {
   const m = abrirModal(`
-    <h2 id="modal-titulo">Boas-vindas ao Achados UFG</h2>
-    <p class="texto-suave">Como devemos te chamar? Seu nome aparece só para quem participa da devolução do objeto.</p>
+    <h2 id="modal-titulo">${usuario ? "Quem está usando esta aba?" : "Boas-vindas ao Achados UFG"}</h2>
+    <p class="texto-suave">${usuario ? "Confirme seu nome ou digite outro. Cada aba pode ser uma pessoa diferente." : "Como devemos te chamar? Seu nome aparece só para quem participa da devolução do objeto."}</p>
     <form id="form-usuario" novalidate>
       <div class="campo"><label for="u-nome">Seu nome</label>
         <input type="text" id="u-nome" autocomplete="name" required autofocus value="${esc(usuario?.nome || "")}" aria-describedby="u-erro">
@@ -142,7 +148,9 @@ function pedirUsuario(obrigatorio = !usuario) {
     const nome = $("#u-nome", m.el).value.trim();
     if (!nome) { $("#u-nome", m.el).setAttribute("aria-invalid", "true"); $("#u-erro", m.el).hidden = false; $("#u-nome", m.el).focus(); return; }
     usuario = { nome, vinculo: $("#u-vinculo", m.el).value };
+    armazenamento.sessao("achados.usuario", usuario);
     armazenamento.gravar("achados.usuario", usuario);
+    ultimasNovas = null;
     m.fechar();
     atualizarCabecalho();
     rotear();
@@ -155,15 +163,21 @@ function atualizarCabecalho() {
   atualizarSino();
 }
 
+let ultimasNovas = null; // para avisar com um toast quando chega notificação nova
 async function atualizarSino() {
   if (!usuario) return;
   try {
     const ns = await api("/api/notificacoes");
-    const novas = ns.filter((n) => !n.lida).length;
+    const naoLidas = ns.filter((n) => !n.lida);
+    const novas = naoLidas.length;
     const selo = $("#selo-notificacoes");
     selo.hidden = novas === 0;
     selo.textContent = novas;
     $("#sr-notificacoes").textContent = novas ? `Notificações: ${novas} novas` : "Notificações";
+    if (ultimasNovas !== null && novas > ultimasNovas && !location.hash.startsWith("#/painel")) {
+      toast(naoLidas[0].texto, { rotulo: "Ver", fn: () => { location.hash = `#/item/${naoLidas[0].itemId}`; } });
+    }
+    ultimasNovas = novas;
   } catch { /* silencioso */ }
 }
 
@@ -233,7 +247,7 @@ async function telaInicio() {
     <div class="passos">
       <div class="card passo"><span class="num">1</span><div><h3>Quem encontra fotografa</h3><p>A IA sugere título, descrição e categoria. Você só confirma ou corrige.</p></div></div>
       <div class="card passo"><span class="num">2</span><div><h3>Quem perdeu descreve</h3><p>Escreva como falaria: “garrafa azul com capa de silicone perto do RU ontem”.</p></div></div>
-      <div class="card passo"><span class="num">3</span><div><h3>Devolução segura</h3><p>Uma pergunta de verificação confirma que o objeto é seu antes da entrega.</p></div></div>
+      <div class="card passo"><span class="num">3</span><div><h3>Devolução como no balcão</h3><p>Você vê onde o objeto está, descreve o que só o dono sabe e confere na entrega, com documento.</p></div></div>
     </div>`;
   const itens = await api("/api/itens");
   const el = $("#recentes");
@@ -375,6 +389,9 @@ function passoFoto() {
   $("#sem-foto").onclick = () => { rascunho = { passo: 1, foto: null, ia: null, campos: { titulo: "", descricao: "", categoria: "outro", cor: "colorido", tags: [], tipoDetalhe: "marca" } }; irPara(1); };
 }
 
+const rotuloDetalhe = (tipo) => config.tiposDetalhe.find((t) => t.id === tipo)?.rotulo ?? "um detalhe";
+const dicaAnotacao = (tipo) => config.tiposDetalhe.find((t) => t.id === tipo)?.exemplo ?? "Ex.: um detalhe que não aparece na foto";
+
 function estadoCarregando(titulo, texto, progresso = null) {
   return `<div class="card carregando"><span class="spinner" aria-hidden="true"></span><span style="flex:1"><strong>${titulo}</strong><br><span class="texto-suave">${texto}</span>
     ${progresso === null ? "" : `<span class="compat-barra" style="display:block;margin-top:8px" role="progressbar" aria-valuenow="${progresso}" aria-valuemin="0" aria-valuemax="100" aria-label="Download do modelo"><span style="width:${progresso}%;background:var(--azul)"></span></span>`}</span></div>`;
@@ -428,7 +445,7 @@ function passoDescricao() {
           <div class="erro-campo" id="titulo-erro" hidden>Dê um nome curto ao objeto, ex.: “Garrafa azul”.</div></div>
         <div class="campo"><label for="descricao">Descrição</label>
           <textarea id="descricao" maxlength="500" aria-describedby="descricao-dica">${esc(campos.descricao)}</textarea>
-          <div class="dica" id="descricao-dica">Cite marcas, adesivos ou defeitos. Não escreva nomes ou números de documentos.</div></div>
+          <div class="dica" id="descricao-dica">Acrescente marcas, adesivos, estampas ou defeitos que ajudem o dono a reconhecer. Não escreva nomes ou números de documentos.</div></div>
         <div class="grade-2">
           <div class="campo"><label for="categoria">Categoria</label>
             <select id="categoria">${config.categorias.map((c) => `<option value="${c.id}" ${c.id === campos.categoria ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
@@ -469,19 +486,10 @@ function passoLocal() {
         <input type="date" id="data" max="${hojeISO()}" value="${esc(c.data || hojeISO())}"></div>
       <fieldset class="campo" style="border:0;padding:0;margin:0 0 16px"><legend class="rotulo">Onde o dono poderá retirar? <span aria-hidden="true">*</span></legend>
         <div class="opcoes">${config.pontos.map((p, i) => `<label class="opcao"><input type="radio" name="entrega" value="${p.id}" ${p.id === (c.pontoEntrega || "portaria-inf") ? "checked" : ""}><span><strong>${esc(p.nome)}</strong><small>${esc(p.horario)}</small></span></label>`).join("")}</div></fieldset>
-      <div class="painel-bloco">
-        <h2 style="display:flex;gap:8px;align-items:center">${ICONES.escudo.replace('viewBox', 'width="22" height="22" viewBox')} Um detalhe que só o dono sabe</h2>
-        <p class="texto-suave">Escolha algo que <strong>não aparece na foto</strong>. Quem disser que o objeto é seu vai precisar contar esse detalhe para ver onde retirar. Ninguém vê o que você escrever aqui.</p>
-        <fieldset style="border:0;padding:0;margin:0 0 12px" ${c.semDetalhe ? "disabled" : ""} id="grupo-detalhe">
-          <legend class="rotulo">Que tipo de detalhe?${rascunho.ia && rascunho.ia.fonte !== "manual" ? ' <span class="chip chip-ia" style="font-size:.72rem">sugerido pela IA</span>' : ""}</legend>
-          <div class="chips" role="radiogroup">${config.tiposDetalhe.map((t) => `<label class="chip chip-opcao"><input type="radio" name="tipo-detalhe" value="${t.id}" ${t.id === (c.tipoDetalhe || "marca") ? "checked" : ""}> ${esc(t.rotulo)}</label>`).join("")}</div>
-          <div class="campo mt" id="campo-pergunta-livre" hidden><label for="pergunta">Qual pergunta o dono deve responder?</label>
-            <input type="text" id="pergunta" value="${esc(c.pergunta || "")}" placeholder="Ex.: Qual o nome do aplicativo na tela de bloqueio?"></div>
-          <div class="campo mt"><label for="resposta" id="rotulo-resposta">Qual é o detalhe?</label>
-            <input type="text" id="resposta" value="${esc(c.resposta || "")}" aria-describedby="resposta-erro">
-            <div class="erro-campo" id="resposta-erro" hidden>Escreva o detalhe ou marque que não encontrou nenhum.</div></div>
-        </fieldset>
-        <label class="opcao"><input type="checkbox" id="sem-detalhe" ${c.semDetalhe ? "checked" : ""}><span><strong>Não encontrei nenhum detalhe assim</strong><small>Quem disser que é dono vai descrever o objeto e você aprova ou recusa o pedido.</small></span></label>
+      <div class="campo">
+        <label for="anotacao">Anotação para conferir na entrega <span class="texto-suave" style="font-weight:400">— opcional, só você vê</span></label>
+        <textarea id="anotacao" maxlength="300" rows="2" aria-describedby="anotacao-dica" placeholder="${esc(dicaAnotacao(c.tipoDetalhe))}">${esc(c.anotacao || "")}</textarea>
+        <div class="dica" id="anotacao-dica">Anote algo que <strong>não aparece na foto</strong>${rascunho.ia && rascunho.ia.fonte !== "manual" ? ` — a IA sugere olhar <strong>${esc(rotuloDetalhe(c.tipoDetalhe).toLowerCase())}</strong>` : ""}. Quando alguém disser que é dono, mostramos esta anotação ao lado da descrição da pessoa para você comparar. Se deixar numa portaria, conte também ao atendente.</div>
       </div>
       <div class="rodape-acoes">
         <button type="button" class="btn btn-secundario" id="voltar">${ICONES.seta}Voltar</button>
@@ -489,35 +497,23 @@ function passoLocal() {
       </div>
       <div id="erro-envio" aria-live="assertive"></div>
     </form>`;
-  // O rótulo e o exemplo do campo mudam conforme o tipo de detalhe escolhido.
-  const atualizarDetalhe = () => {
-    const tipo = config.tiposDetalhe.find((t) => t.id === $("input[name=tipo-detalhe]:checked")?.value) || config.tiposDetalhe[0];
-    $("#rotulo-resposta").textContent = tipo.campo;
-    $("#resposta").placeholder = tipo.exemplo || "O que o dono deve responder";
-    $("#campo-pergunta-livre").hidden = tipo.id !== "outro";
-  };
-  $$("input[name=tipo-detalhe]").forEach((r) => (r.onchange = atualizarDetalhe));
-  atualizarDetalhe();
-  $("#sem-detalhe").onchange = (e) => { $("#grupo-detalhe").disabled = e.target.checked; };
   const ler = () => Object.assign(c, {
     local: $("#local").value, localDetalhe: $("#localDetalhe").value.trim(), data: $("#data").value || hojeISO(),
-    pontoEntrega: $("input[name=entrega]:checked")?.value, semDetalhe: $("#sem-detalhe").checked,
-    tipoDetalhe: $("input[name=tipo-detalhe]:checked")?.value, pergunta: $("#pergunta").value.trim(), resposta: $("#resposta").value.trim()
+    pontoEntrega: $("input[name=entrega]:checked")?.value, anotacao: $("#anotacao").value.trim()
   });
   $("#voltar").onclick = () => { ler(); irPara(1); };
   $("#form-local").onsubmit = async (e) => {
     e.preventDefault(); ler(); salvarRascunho();
-    let primeiroErro = null;
-    const marcar = (id, erroId, invalido) => { $(id).setAttribute("aria-invalid", String(invalido)); $(erroId).hidden = !invalido; if (invalido && !primeiroErro) primeiroErro = $(id); };
-    marcar("#local", "#local-erro", !c.local);
-    marcar("#resposta", "#resposta-erro", !c.semDetalhe && (!c.resposta || (c.tipoDetalhe === "outro" && !c.pergunta)));
-    if (primeiroErro) return primeiroErro.focus();
+    if (!c.local) {
+      $("#local").setAttribute("aria-invalid", "true"); $("#local-erro").hidden = false; return $("#local").focus();
+    }
+    $("#local").setAttribute("aria-invalid", "false"); $("#local-erro").hidden = true;
     const ia = rascunho.ia;
     const editado = ia && ia.fonte !== "manual" && (ia.titulo !== c.titulo || ia.descricao !== c.descricao || ia.categoria !== c.categoria || ia.cor !== c.cor);
     const btn = $("button[type=submit]", e.target); btn.disabled = true; btn.textContent = "Publicando…";
     try {
       const r = await api("/api/itens", { method: "POST", json: {
-        ...c, resposta: c.semDetalhe ? "" : c.resposta, foto: rascunho.foto, fotoSensivel: Boolean(ia?.dadosSensiveis), avisoPrivacidade: ia?.avisoPrivacidade || "",
+        ...c, foto: rascunho.foto, fotoSensivel: Boolean(ia?.dadosSensiveis), avisoPrivacidade: ia?.avisoPrivacidade || "",
         geradoPorIA: Boolean(ia && ia.fonte !== "manual"), editadoPeloUsuario: Boolean(editado) } });
       rascunho = { passo: 3, criado: r.item, avisados: r.avisados };
       irPara(3);
@@ -534,7 +530,7 @@ function passoConcluido() {
     <div class="card sucesso-grande">
       <div class="selo-ok">${ICONES.check}</div>
       <h1>Obrigado! Seu achado foi publicado</h1>
-      <p class="texto-suave">${avisados ? `<strong>${avisados} ${avisados === 1 ? "pessoa que procurava" : "pessoas que procuravam"} algo parecido ${avisados === 1 ? "foi avisada" : "foram avisadas"} agora.</strong> ` : ""}${criado.temDetalhe ? "Você receberá uma notificação quando o dono acertar o detalhe." : "Você receberá uma notificação quando alguém pedir a devolução, para aprovar ou recusar."}</p>
+      <p class="texto-suave">${avisados ? `<strong>${avisados} ${avisados === 1 ? "pessoa que procurava" : "pessoas que procuravam"} algo parecido ${avisados === 1 ? "foi avisada" : "foram avisadas"} agora.</strong> ` : ""}${criado.ficaComQuemAchou ? "Quando alguém disser que é dono, você recebe a descrição da pessoa para comparar e combinar a entrega." : `Leve o objeto até ${esc(criado.entrega.nome)}. Você será avisado quando o dono for buscar.`}</p>
       ${linhaTempoHTML(criado)}
       <div class="rodape-acoes" style="justify-content:center">
         <a class="btn btn-secundario" href="#/item/${criado.id}">Ver publicação</a>
@@ -549,12 +545,33 @@ function passoConcluido() {
 function linhaTempoHTML(item) {
   const ordem = ["encontrado", "em_devolucao", "devolvido"];
   const atual = ordem.indexOf(item.status);
-  const rot = ["Encontrado", "Dono confirmado", "Devolvido"];
+  const rot = ["Encontrado", "Retirada combinada", "Devolvido"];
   return `<ol class="linha-tempo" aria-label="Situação do item: ${ROTULO_STATUS[item.status]}">${ordem.map((s, i) => {
-    const h = item.historico?.find((x) => x.status === s);
+    // Data mais recente de cada etapa, e só para etapas já alcançadas (a retirada pode ter sido desfeita).
+    const h = i <= atual ? [...(item.historico || [])].reverse().find((x) => x.status === s) : null;
     const cls = i < atual || (i === atual && s === "devolvido") ? "ok" : i === atual ? "atual ok" : "";
     return `<li class="${cls}" ${i === atual ? 'aria-current="step"' : ""}><span class="bola">${i <= atual ? ICONES.check : ""}</span>${rot[i]}<small>${h ? quando(h.em) : "—"}</small></li>`;
   }).join("")}</ol>`;
+}
+
+// Confirmação para ações que não dá para desfazer (prevenção de erros).
+function confirmar({ titulo, texto, rotulo, perigo = false }) {
+  return new Promise((resolver) => {
+    let resposta = false;
+    const m = abrirModal(`
+      <h2 id="modal-titulo">${esc(titulo)}</h2>
+      <p class="texto-suave">${texto}</p>
+      <div class="rodape-acoes"><button type="button" class="btn btn-secundario" data-fechar>Cancelar</button>
+        <button type="button" class="btn ${perigo ? "btn-perigo" : "btn-primario"}" id="confirmar-sim">${esc(rotulo)}</button></div>`,
+      { aoFechar: () => resolver(resposta) });
+    $("#confirmar-sim", m.el).onclick = () => { resposta = true; m.fechar(); };
+  });
+}
+
+function voltar() {
+  // Se a pessoa chegou direto pelo link, não há página anterior no app: vai para a busca.
+  if (history.length > 1 && document.referrer.startsWith(location.origin)) history.back();
+  else location.hash = "#/buscar";
 }
 
 async function telaItem(partes) {
@@ -562,9 +579,11 @@ async function telaItem(partes) {
   try { item = await api(`/api/itens/${partes[1]}`); }
   catch { main.innerHTML = `<div class="card vazio"><h1>Item não encontrado</h1><p>Ele pode ter sido removido.</p><a class="btn btn-primario" href="#/buscar">Voltar à busca</a></div>`; return; }
   const entrega = item.entrega;
-  const podeVerEntrega = item.souQuemEncontrou || item.souQuemReivindicou;
+  const ondeEsta = item.ficaComQuemAchou
+    ? `Com ${esc(primeiroNome(item.criadoPor?.nome))}, que encontrou <small class="texto-suave">(entrega combinada pelo app)</small>`
+    : `${esc(entrega.nome)} <small class="texto-suave">(${esc(entrega.horario)})</small>`;
   main.innerHTML = `
-    <a href="javascript:history.back()" class="btn btn-fantasma" style="padding-left:0">${ICONES.seta}Voltar</a>
+    <button type="button" class="btn btn-fantasma" id="voltar-item" style="padding-left:0">${ICONES.seta}Voltar</button>
     <div class="detalhe">
       <div>${fotoHTML(item)}</div>
       <div>
@@ -573,124 +592,160 @@ async function telaItem(partes) {
         <p>${esc(item.descricao)}</p>
         ${item.geradoPorIA ? `<div class="chips"><span class="chip chip-ia">${ICONES.ia.replace("viewBox", 'width="14" height="14" viewBox')} Descrição gerada por IA${item.editadoPeloUsuario ? " e corrigida por quem encontrou" : " e confirmada por quem encontrou"}</span></div>` : ""}
         <dl class="lista-info">
+          <dt>Onde está agora</dt><dd>${ondeEsta}</dd>
           <dt>Encontrado em</dt><dd>${esc(item.localNome)}${item.localDetalhe ? ` · ${esc(item.localDetalhe)}` : ""}</dd>
           <dt>Quando</dt><dd>${quando(item.data)} (${new Date(item.data + "T12:00").toLocaleDateString("pt-BR")})</dd>
           <dt>Categoria</dt><dd>${esc(nomeCategoria(item.categoria))}</dd>
-          <dt>Retirada</dt><dd>${podeVerEntrega ? `${esc(entrega.nome)} <small class="texto-suave">(${esc(entrega.horario)})</small>` : "Aparece quando o dono for confirmado"}</dd>
           <dt>Cadastrado por</dt><dd>${esc(primeiroNome(item.criadoPor?.nome))} · ${esc(item.criadoPor?.vinculo || "")}</dd>
         </dl>
         <div class="painel-bloco"><h2>Situação</h2>${linhaTempoHTML(item)}</div>
         <div id="acoes-item"></div>
       </div>
     </div>`;
+  $("#voltar-item").onclick = voltar;
   const acoes = $("#acoes-item");
-  if (item.status === "encontrado" && !item.souQuemEncontrou && item.meuPedido?.situacao === "pendente") {
-    acoes.innerHTML = `<div class="aviso aviso-info">${ICONES.relogio}<span><strong>Seu pedido foi enviado.</strong> ${esc(primeiroNome(item.criadoPor?.nome))} vai conferir sua descrição; você será avisado no sino.</span></div>`;
-  } else if (item.status === "encontrado" && !item.souQuemEncontrou && item.meuPedido?.situacao === "recusado") {
-    acoes.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>Quem encontrou achou que sua descrição não corresponde ao objeto. Se for mesmo seu, procure o ponto de entrega com um documento.</span></div>`;
-  } else if (item.status === "encontrado" && !item.souQuemEncontrou) {
-    const esgotou = item.temDetalhe && item.tentativasRestantes <= 0;
-    acoes.innerHTML = `<button class="btn btn-destaque btn-bloco" id="reivindicar">${ICONES.escudo}É meu! Quero recuperar</button>
-      <p class="texto-suave mt" style="font-size:.88rem">${item.temDetalhe && !esgotou
-        ? `Você vai contar um detalhe do objeto que não aparece na foto. ${item.tentativasRestantes} ${item.tentativasRestantes === 1 ? "tentativa restante" : "tentativas restantes"}.`
-        : "Você vai descrever o objeto e quem encontrou confere o pedido."}</p>`;
-    $("#reivindicar").onclick = () => (!usuario ? pedirUsuario() : item.temDetalhe && !esgotou ? modalVerificacao(item) : modalPedido(item));
-  } else if (item.status === "encontrado" && item.souQuemEncontrou) {
+  const atualizar = () => telaItem(partes);
+  const r = item.retiradaAtiva;
+
+  if (item.status === "devolvido") {
+    acoes.innerHTML = `<div class="aviso aviso-sucesso">${ICONES.check}<span>Este objeto já voltou para o dono. 🎉</span></div>`;
+
+  } else if (item.status === "em_devolucao" && item.souQuemReivindicou) {
+    // Quem perdeu: instruções de retirada.
+    acoes.innerHTML = item.ficaComQuemAchou
+      ? `<div class="aviso aviso-sucesso">${ICONES.check}<span><strong>${esc(primeiroNome(item.criadoPor.nome))} reconheceu seu objeto.</strong><br>Mensagem: “${esc(r?.mensagem || "")}”<br>Confira o objeto na hora da entrega.</span></div>`
+      : `<div class="painel-bloco"><h2>Como retirar</h2>
+          <p class="codigo-retirada" aria-label="Código de retirada">${esc(r?.codigo || "")}</p>
+          <ol class="lista-passos"><li>Vá até <strong>${esc(entrega.nome)}</strong> (${esc(entrega.horario)}).</li>
+            <li>Mostre este código e um <strong>documento com foto</strong>.</li>
+            <li>Descreva o objeto ao atendente — por exemplo, o que tem dentro ou alguma marca.</li></ol></div>`;
+    acoes.innerHTML += `<div class="rodape-acoes"><button class="btn btn-secundario" id="desistir">Não é meu / desistir</button>
+      <button class="btn btn-primario" id="recebi">${ICONES.check}Já recebi meu objeto</button></div>`;
+    $("#recebi").onclick = async () => {
+      if (!await confirmar({ titulo: "Confirmar que recebeu?", texto: "O objeto será marcado como devolvido e sairá da lista de achados.", rotulo: "Sim, recebi" })) return;
+      await api(`/api/itens/${item.id}/devolver`, { method: "POST" }); toast("Que bom que voltou para você! 🎉"); atualizar();
+    };
+    $("#desistir").onclick = async () => {
+      if (!await confirmar({ titulo: "Desistir da retirada?", texto: "O objeto volta a aparecer como aguardando o dono.", rotulo: "Desistir", perigo: true })) return;
+      await api(`/api/itens/${item.id}/reabrir`, { method: "POST" }); toast("Retirada desfeita."); atualizar();
+    };
+
+  } else if (item.status === "em_devolucao" && item.souQuemEncontrou) {
+    // Quem encontrou: acompanha a retirada e confirma a entrega.
+    acoes.innerHTML = `<div class="aviso aviso-info">${ICONES.relogio}<span>${item.ficaComQuemAchou
+      ? `Entrega combinada com <strong>${esc(r?.nome)}</strong>: “${esc(r?.mensagem || "")}”. Na hora, confira o objeto e um documento.`
+      : `<strong>${esc(r?.nome)}</strong> avisou que vai retirar em ${esc(entrega.nome)} com o código <strong>${esc(r?.codigo || "")}</strong>.`}</span></div>
+      ${item.anotacao ? `<p class="texto-suave">Sua anotação para conferir: <strong>“${esc(item.anotacao)}”</strong></p>` : ""}
+      <div class="rodape-acoes"><button class="btn btn-secundario" id="reabrir">Não era o dono</button>
+        <button class="btn btn-primario" id="entreguei">${ICONES.check}Marcar como entregue</button></div>`;
+    $("#entreguei").onclick = async () => {
+      if (!await confirmar({ titulo: "Marcar como entregue?", texto: `Confirme só depois que ${esc(r?.nome)} estiver com o objeto.`, rotulo: "Sim, entreguei" })) return;
+      await api(`/api/itens/${item.id}/devolver`, { method: "POST" }); toast("Devolução concluída. Obrigado por ajudar!"); atualizar();
+    };
+    $("#reabrir").onclick = async () => {
+      if (!await confirmar({ titulo: "Não era o dono?", texto: "A retirada será desfeita e o objeto volta a aguardar o dono verdadeiro.", rotulo: "Desfazer retirada", perigo: true })) return;
+      await api(`/api/itens/${item.id}/reabrir`, { method: "POST" }); toast("Retirada desfeita."); atualizar();
+    };
+
+  } else if (item.status === "em_devolucao") {
+    acoes.innerHTML = `<div class="aviso aviso-info">${ICONES.info}<span>Outra pessoa já combinou a retirada deste objeto. Se ele for seu, ative um alerta: avisaremos se a retirada for desfeita.</span></div>`;
+
+  } else if (item.souQuemEncontrou) {
+    // Quem encontrou: compara cada pedido com a própria anotação (a IA só dá uma dica).
     const pedidos = item.pedidos || [];
     acoes.innerHTML = pedidos.length
-      ? `<div class="painel-bloco"><h2>Pedidos de devolução (${pedidos.length})</h2>
-          <p class="texto-suave">Compare a descrição com o objeto. Aprove só se tiver certeza.</p>
-          ${pedidos.map((p) => `<div class="linha-lista" style="flex-direction:column;align-items:stretch"><span class="info"><strong>${esc(p.usuario.nome)}</strong> <small class="texto-suave">· ${quando(p.em)}</small><br>“${esc(p.texto)}”</span>
-            <span style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-perigo" data-pedido="${p.id}" data-acao="recusar">Recusar</button><button class="btn btn-primario" data-pedido="${p.id}" data-acao="aprovar">Aprovar</button></span></div>`).join("")}</div>`
-      : `<div class="aviso aviso-info">${ICONES.info}<span>Você cadastrou este item. ${item.temDetalhe
-        ? `Avisaremos quando alguém acertar o detalhe que você informou (pergunta mostrada: <em>“${esc(item.pergunta)}”</em>).`
-        : "Avisaremos quando alguém pedir a devolução, para você aprovar ou recusar."}</span></div>`;
-    $$("[data-pedido]").forEach((b) => (b.onclick = async () => {
-      await api(`/api/itens/${item.id}/pedidos/${b.dataset.pedido}/${b.dataset.acao}`, { method: "POST" });
-      toast(b.dataset.acao === "aprovar" ? "Pedido aprovado. A pessoa foi avisada de onde retirar." : "Pedido recusado.");
-      telaItem(partes);
+      ? `<div class="painel-bloco"><h2>Pessoas que dizem ser donas (${pedidos.length})</h2>
+          ${item.anotacao ? `<p>Sua anotação: <strong>“${esc(item.anotacao)}”</strong></p>` : `<p class="texto-suave">Você não fez anotação; confira pela foto e pelos detalhes.</p>`}
+          ${pedidos.map((p) => `<div class="linha-lista" style="flex-direction:column;align-items:stretch">
+            <span class="info"><strong>${esc(p.usuario.nome)}</strong> <small class="texto-suave">· ${quando(p.em)}</small><br>“${esc(p.texto)}”</span>
+            ${p.confere === true ? `<span class="chip chip-ia" style="align-self:flex-start">${ICONES.ia.replace("viewBox", 'width="14" height="14" viewBox')} A descrição cita o que você anotou</span>`
+              : p.confere === false ? `<span class="chip" style="align-self:flex-start;background:var(--ambar-claro);color:#5A4100">Não cita o que você anotou — compare com atenção</span>` : ""}
+            <span style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-perigo" data-recusar="${p.id}">Não confere</button><button class="btn btn-primario" data-aprovar="${p.id}">Confere: combinar entrega</button></span></div>`).join("")}
+          <p class="texto-suave" style="font-size:.85rem">A marcação da IA é só uma ajuda — quem decide é você.</p></div>`
+      : `<div class="aviso aviso-info">${ICONES.info}<span>${item.ficaComQuemAchou
+        ? "Você está com este objeto. Quando alguém disser que é dono, a descrição da pessoa aparece aqui para você comparar com sua anotação e combinar a entrega."
+        : `Leve o objeto até <strong>${esc(entrega.nome)}</strong>. Avisaremos quando o dono for buscar.`}</span></div>`;
+    $$("[data-recusar]").forEach((b) => (b.onclick = async () => {
+      if (!await confirmar({ titulo: "Recusar o pedido?", texto: "A pessoa será avisada de que a descrição não bate com o objeto.", rotulo: "Recusar", perigo: true })) return;
+      await api(`/api/itens/${item.id}/pedidos/${b.dataset.recusar}/recusar`, { method: "POST" }); toast("Pedido recusado."); atualizar();
     }));
-  } else if (item.status === "em_devolucao" && (item.souQuemEncontrou || item.souQuemReivindicou)) {
-    acoes.innerHTML = `<div class="aviso aviso-sucesso">${ICONES.check}<span>${item.souQuemReivindicou
-      ? `Posse confirmada! Retire em <strong>${esc(entrega.nome)}</strong> (${esc(entrega.horario)}). ${entrega.id === "comigo" ? `Combine com ${esc(primeiroNome(item.criadoPor.nome))} pelas notificações.` : "Leve um documento com foto."}`
-      : `${esc(item.contato?.reivindicadoPor)} confirmou a posse. Quando entregar, confirme abaixo.`}</span></div>
-      <button class="btn btn-primario btn-bloco" id="devolver">${ICONES.check}${item.souQuemReivindicou ? "Já recebi meu objeto" : "Confirmar que devolvi"}</button>`;
-    $("#devolver").onclick = async () => { await api(`/api/itens/${item.id}/devolver`, { method: "POST" }); toast("Devolução concluída. Obrigado!"); telaItem(partes); };
-  } else if (item.status === "em_devolucao") {
-    acoes.innerHTML = `<div class="aviso aviso-info">${ICONES.info}<span>Outra pessoa já confirmou a posse deste objeto e a devolução está em andamento.</span></div>`;
+    $$("[data-aprovar]").forEach((b) => (b.onclick = () => modalCombinar(item, b.dataset.aprovar, atualizar)));
+
+  } else if (item.meuPedido?.situacao === "pendente") {
+    acoes.innerHTML = `<div class="aviso aviso-info">${ICONES.relogio}<span><strong>Sua descrição foi enviada.</strong> ${esc(primeiroNome(item.criadoPor?.nome))} vai comparar com o objeto e combinar a entrega com você. Avisaremos no sino.</span></div>`;
+
   } else {
-    acoes.innerHTML = `<div class="aviso aviso-sucesso">${ICONES.check}<span>Este objeto já voltou para o dono. 🎉</span></div>`;
+    // Quem perdeu: "É meu!"
+    const recusado = item.meuPedido?.situacao === "recusado";
+    acoes.innerHTML = `${recusado ? `<div class="aviso aviso-erro">${ICONES.info}<span>Sua descrição anterior não convenceu quem encontrou. Se o objeto for mesmo seu, tente de novo com mais detalhes.</span></div>` : ""}
+      <button class="btn btn-destaque btn-bloco" id="e-meu">${ICONES.escudo}É meu!</button>
+      <p class="texto-suave mt" style="font-size:.88rem">${item.ficaComQuemAchou
+        ? `Você vai descrever o objeto para ${esc(primeiroNome(item.criadoPor?.nome))} conferir e combinar a entrega.`
+        : `Você recebe um código para retirar em ${esc(entrega.nome)}. Lá, mostre um documento e descreva o objeto.`}</p>`;
+    $("#e-meu").onclick = () => (!usuario ? pedirUsuario() : modalEMeu(item, atualizar));
   }
 }
 
-function modalVerificacao(item) {
-  const m = abrirModal(`
-    <h2 id="modal-titulo">Conte um detalhe do seu objeto</h2>
-    <p class="texto-suave">Quem encontrou guardou um detalhe que não aparece na foto. Responda com suas palavras — não precisa ser igual.</p>
-    <form id="form-verif" novalidate>
-      <div class="campo"><label for="resp">${esc(item.pergunta)}</label>
-        <input type="text" id="resp" autocomplete="off" autofocus aria-describedby="verif-estado"></div>
-      <div id="verif-estado" aria-live="assertive"></div>
+// "É meu!": dois caminhos, como na vida real.
+function modalEMeu(item, depois) {
+  const balcao = !item.ficaComQuemAchou;
+  const nome = esc(primeiroNome(item.criadoPor?.nome));
+  const m = abrirModal(balcao ? `
+    <h2 id="modal-titulo">Retirar em ${esc(item.entrega.nome)}</h2>
+    <ol class="lista-passos"><li>Avise abaixo que vai buscar: você recebe um <strong>código de retirada</strong>.</li>
+      <li>Vá até ${esc(item.entrega.nome)} — ${esc(item.entrega.horario)}.</li>
+      <li>Mostre o código e um <strong>documento com foto</strong> e descreva o objeto ao atendente.</li></ol>
+    <form id="form-e-meu" novalidate>
+      <div class="campo"><label for="texto-pedido">Algo que ajude a reconhecer <span class="texto-suave" style="font-weight:400">(opcional)</span></label>
+        <textarea id="texto-pedido" maxlength="500" rows="2" placeholder="Ex.: tem um adesivo da NASA na tampa"></textarea></div>
+      <div id="pedido-estado" aria-live="assertive"></div>
       <div class="rodape-acoes"><button type="button" class="btn btn-secundario" data-fechar>Cancelar</button>
-        <button type="submit" class="btn btn-primario">Enviar resposta</button></div>
+        <button type="submit" class="btn btn-destaque">Vou buscar</button></div>
+    </form>` : `
+    <h2 id="modal-titulo">Conte para ${nome} como é o seu objeto</h2>
+    <p class="texto-suave">${nome} está com ele e vai comparar sua descrição com o objeto. Conte o que <strong>não aparece na foto</strong>: o que tem dentro, marcas, defeitos, onde você perdeu.</p>
+    <form id="form-e-meu" novalidate>
+      <div class="campo"><label for="texto-pedido">Sua descrição</label>
+        <textarea id="texto-pedido" maxlength="500" rows="3" autofocus placeholder="Ex.: tem meu nome bordado na etiqueta e um rasgo no bolso direito"></textarea></div>
+      <div id="pedido-estado" aria-live="assertive"></div>
+      <div class="rodape-acoes"><button type="button" class="btn btn-secundario" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Enviar para ${nome}</button></div>
     </form>`);
-  $("#form-verif", m.el).onsubmit = async (e) => {
+  $("#form-e-meu", m.el).onsubmit = async (e) => {
     e.preventDefault();
-    const resposta = $("#resp", m.el).value.trim(), estado = $("#verif-estado", m.el), btn = $("button[type=submit]", m.el);
-    if (!resposta) { estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>Escreva sua resposta.</span></div>`; return; }
-    btn.disabled = true; btn.textContent = "Conferindo…";
+    const texto = $("#texto-pedido", m.el).value.trim(), estado = $("#pedido-estado", m.el);
     try {
-      const r = await api(`/api/itens/${item.id}/reivindicar`, { method: "POST", json: { resposta } });
-      if (r.ok) {
-        m.el.querySelector(".modal").innerHTML = `<div class="sucesso-grande"><div class="selo-ok">${ICONES.check}</div>
-          <h2 id="modal-titulo">Resposta confirmada!</h2>
-          <p>Retire seu objeto em <strong>${esc(r.item.entrega.nome)}</strong><br><span class="texto-suave">${esc(r.item.entrega.horario)}</span></p>
-          <p class="texto-suave">Quem encontrou foi avisado. Leve um documento com foto.</p>
-          <button class="btn btn-primario btn-bloco" data-fechar>Entendi</button></div>`;
-        $("[data-fechar]", m.el).onclick = () => { m.fechar(); rotear(); };
-        $("[data-fechar]", m.el).focus();
-      } else {
-        btn.disabled = false; btn.textContent = "Enviar resposta";
-        if (r.tentativasRestantes > 0) {
-          estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>Não bateu com o detalhe guardado. Você ainda tem ${r.tentativasRestantes} ${r.tentativasRestantes === 1 ? "tentativa" : "tentativas"}.</span></div>`;
-          $("#resp", m.el).select();
-        } else {
-          // Sem tentativas: em vez de bloquear, oferece enviar a descrição para quem encontrou avaliar.
-          m.fechar();
-          modalPedido(item, "Suas tentativas acabaram. Se o objeto for mesmo seu, descreva-o para quem encontrou avaliar.");
-        }
-      }
+      const r = await api(`/api/itens/${item.id}/pedidos`, { method: "POST", json: { texto } });
+      m.fechar();
+      toast(balcao ? `Combinado! Seu código de retirada é ${r.item.retiradaAtiva?.codigo}.` : `Enviado! ${primeiroNome(item.criadoPor?.nome)} vai responder pelo app.`);
+      depois();
     } catch (err) {
-      btn.disabled = false; btn.textContent = "Enviar resposta";
       estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(err.message)}</span></div>`;
+      $("#texto-pedido", m.el).focus();
     }
   };
 }
 
-// Pedido avaliado por quem encontrou (item sem detalhe secreto ou tentativas esgotadas).
-function modalPedido(item, aviso) {
+// Quem encontrou aceita o pedido e propõe onde e quando entregar.
+function modalCombinar(item, pedidoId, depois) {
   const m = abrirModal(`
-    <h2 id="modal-titulo">Descreva seu objeto</h2>
-    ${aviso ? `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(aviso)}</span></div>` : ""}
-    <p class="texto-suave">${esc(primeiroNome(item.criadoPor?.nome))} vai ler sua descrição e aprovar ou recusar. Conte detalhes que <strong>não aparecem na foto</strong>: o que tem dentro, marcas, defeitos, onde você perdeu.</p>
-    <form id="form-pedido" novalidate>
-      <div class="campo"><label for="texto-pedido">Sua descrição</label>
-        <textarea id="texto-pedido" maxlength="500" autofocus aria-describedby="pedido-estado" placeholder="Ex.: tem meu nome bordado na etiqueta e um rasgo no bolso direito"></textarea></div>
-      <div id="pedido-estado" aria-live="assertive"></div>
+    <h2 id="modal-titulo">Combinar a entrega</h2>
+    <p class="texto-suave">Proponha um lugar movimentado do campus e um horário. Na hora, peça para a pessoa mostrar um documento.</p>
+    <form id="form-combinar" novalidate>
+      <div class="campo"><label for="mensagem">Onde e quando?</label>
+        <input type="text" id="mensagem" maxlength="300" autofocus placeholder="Ex.: amanhã às 10h, na entrada da BC"></div>
+      <div id="combinar-estado" aria-live="assertive"></div>
       <div class="rodape-acoes"><button type="button" class="btn btn-secundario" data-fechar>Cancelar</button>
-        <button type="submit" class="btn btn-primario">Enviar pedido</button></div>
+        <button type="submit" class="btn btn-primario">Enviar</button></div>
     </form>`);
-  $("#form-pedido", m.el).onsubmit = async (e) => {
+  $("#form-combinar", m.el).onsubmit = async (e) => {
     e.preventDefault();
-    const texto = $("#texto-pedido", m.el).value.trim(), estado = $("#pedido-estado", m.el);
     try {
-      await api(`/api/itens/${item.id}/pedidos`, { method: "POST", json: { texto } });
-      m.fechar();
-      toast("Pedido enviado! Você será avisado quando for avaliado.");
-      rotear();
+      await api(`/api/itens/${item.id}/pedidos/${pedidoId}/aprovar`, { method: "POST", json: { mensagem: $("#mensagem", m.el).value } });
+      m.fechar(); toast("Entrega combinada. A pessoa foi avisada."); depois();
     } catch (err) {
-      estado.innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(err.message)}</span></div>`;
-      $("#texto-pedido", m.el).focus();
+      $("#combinar-estado", m.el).innerHTML = `<div class="aviso aviso-erro">${ICONES.info}<span>${esc(err.message)}</span></div>`;
+      $("#mensagem", m.el).focus();
     }
   };
 }
@@ -714,14 +769,14 @@ async function telaPainel(_p, params) {
   if (aba === "notificacoes") {
     const ns = await api("/api/notificacoes");
     alvo.innerHTML = ns.length ? ns.map((n) => `<a class="notificacao ${n.lida ? "" : "nova"}" href="#/item/${n.itemId}"><span class="ponto" aria-hidden="true"></span><span>${n.lida ? "" : '<span class="sr">Nova: </span>'}${esc(n.texto)}<br><small class="texto-suave">${quando(n.em)}</small></span></a>`).join("")
-      : `<div class="card vazio">${ICONES.sino}<h3>Nada por aqui ainda</h3><p class="texto-suave">Quando um item compatível com seus alertas aparecer ou alguém reivindicar um objeto que você achou, avisaremos aqui.</p></div>`;
+      : `<div class="card vazio">${ICONES.sino}<h3>Nada por aqui ainda</h3><p class="texto-suave">Quando um item compatível com seus alertas aparecer ou alguém disser que é dono de um objeto que você achou, avisaremos aqui.</p></div>`;
     if (ns.some((n) => !n.lida)) { await api("/api/notificacoes/lidas", { method: "POST" }); atualizarSino(); }
   } else if (aba === "registros") {
     const { encontrados, reivindicados } = await api("/api/meus");
     const linha = (i) => `<a class="linha-lista" href="#/item/${i.id}" style="text-decoration:none;color:inherit"><span class="mini">${i.foto ? `<img src="${esc(i.foto)}" alt="">` : ""}</span><span class="info"><strong>${esc(i.titulo)}</strong><br><small class="texto-suave">${esc(i.localNome)} · ${quando(i.data)}</small></span>${statusHTML(i.status)}</a>`;
     alvo.innerHTML = `
       <div class="painel-bloco"><h2>Objetos que encontrei (${encontrados.length})</h2>${encontrados.map(linha).join("") || '<p class="texto-suave">Você ainda não cadastrou objetos. <a href="#/encontrei">Cadastrar agora</a></p>'}</div>
-      <div class="painel-bloco"><h2>Objetos que recuperei (${reivindicados.length})</h2>${reivindicados.map(linha).join("") || '<p class="texto-suave">Nenhum por enquanto.</p>'}</div>`;
+      <div class="painel-bloco"><h2>Meus pedidos de devolução (${reivindicados.length})</h2>${reivindicados.map(linha).join("") || '<p class="texto-suave">Nenhum por enquanto.</p>'}</div>`;
   } else {
     const desenhar = async () => {
       const als = await api("/api/alertas");
@@ -753,7 +808,7 @@ async function telaPainel(_p, params) {
   const faixa = $("#faixa-modo");
   if (config.modoIA === "estatico") {
     faixa.hidden = false;
-    faixa.innerHTML = `Demonstração online: a análise de fotos usa um modelo aberto que roda no seu navegador e <strong>os dados ficam só neste navegador</strong> — outras pessoas não veem o que você cadastra. Troque de usuário no avatar para simular os dois lados. <button type="button" class="link-faixa" id="restaurar">Restaurar exemplos</button>`;
+    faixa.innerHTML = `<strong>Demonstração:</strong> os dados ficam só neste navegador. Para ver os dois lados, abra <strong>outra aba</strong> e entre com outro nome. <button type="button" class="link-faixa" id="restaurar">Restaurar exemplos</button>`;
     $("#restaurar").onclick = async () => { await api("/api/reset", { method: "POST" }); armazenamento.sessao("achados.rascunho", null); location.hash = "#/"; location.reload(); };
   } else if (config.modoIA !== "claude") {
     faixa.hidden = false;
@@ -762,6 +817,18 @@ async function telaPainel(_p, params) {
   atualizarCabecalho();
   window.addEventListener("hashchange", rotear);
   await rotear();
-  if (!usuario) pedirUsuario();
+  // Aba nova: confirma quem está usando (nome anterior já preenchido), para facilitar usar
+  // uma aba como "quem encontrou" e outra como "quem perdeu".
+  if (!usuarioDaAba) pedirUsuario(!usuario);
   setInterval(atualizarSino, 20000);
+
+  // ---- Várias abas: o que é publicado numa aba aparece nas outras.
+  // Versão estática: outra aba gravou no localStorage → evento "storage" nesta aba.
+  // Versão com servidor: ao voltar para a aba, recarrega os dados.
+  const telaSegura = () => !$("#modal-raiz").children.length && !location.hash.startsWith("#/encontrei");
+  const atualizarTudo = () => { atualizarSino(); if (telaSegura()) rotear(); };
+  window.addEventListener("storage", (e) => {
+    if (apiEstatica && e.key === apiEstatica.chave) { apiEstatica.invalidar(); atualizarTudo(); }
+  });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { apiEstatica?.invalidar(); atualizarTudo(); } });
 })();

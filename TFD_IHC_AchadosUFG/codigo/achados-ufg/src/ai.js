@@ -177,7 +177,9 @@ export async function buscar(consulta, candidatos) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Verificação de posse
+// 3. Apoio à conferência de posse
+// A IA NÃO decide quem é o dono: só indica a quem encontrou se a descrição de quem diz ser dono
+// cita o detalhe que ele anotou no cadastro. A decisão é sempre humana.
 // ---------------------------------------------------------------------------
 const SCHEMA_VERIFICACAO = {
   type: "object",
@@ -186,14 +188,14 @@ const SCHEMA_VERIFICACAO = {
   additionalProperties: false
 };
 
-export async function verificarResposta({ pergunta, esperada, dada }) {
+export async function verificarResposta({ esperada, dada }) {
   if (cliente) {
     try {
       const r = await chamarClaude({
-        system: "Você confere se a resposta de quem diz ser dono de um objeto perdido corresponde à resposta registrada por quem o encontrou. Aceite sinônimos, erros de digitação e diferenças de formato, mas seja rigoroso com o conteúdo: números, cores e palavras distintivas precisam bater. Responda em português.",
+        system: "Quem encontrou um objeto anotou um detalhe que não aparece na foto. Outra pessoa diz ser a dona e descreveu o objeto. Indique se a descrição menciona o detalhe anotado (aceite sinônimos, erros de digitação e outra forma de dizer; números e palavras distintivas precisam bater). Sua resposta é só uma dica para quem encontrou decidir. Responda em português.",
         schema: SCHEMA_VERIFICACAO,
         maxTokens: 500,
-        content: `Pergunta: ${pergunta}\nResposta registrada: ${esperada}\nResposta de quem reivindica: ${dada}`
+        content: `Detalhe anotado por quem encontrou: ${esperada}\nDescrição de quem diz ser dono: ${dada}`
       });
       return { ok: r.confere, fonte: "claude" };
     } catch (e) {

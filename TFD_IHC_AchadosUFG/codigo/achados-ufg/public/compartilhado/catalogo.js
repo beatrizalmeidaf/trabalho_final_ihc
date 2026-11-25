@@ -63,18 +63,13 @@ export function pontoEntrega(id) {
   return PONTOS_ENTREGA.find((p) => p.id === id) ?? PONTOS_ENTREGA[PONTOS_ENTREGA.length - 1];
 }
 
-// Tipos de "detalhe que só o dono sabe". Quem encontrou escolhe o tipo e escreve o detalhe;
-// o app monta a pergunta mostrada a quem diz ser dono.
+// Tipos de detalhe que ajudam a conferir quem é o dono. Usados para sugerir (pela IA) o que
+// anotar no cadastro: o exemplo vira o texto de ajuda do campo "Anotação para conferir na entrega".
 export const TIPOS_DETALHE = [
-  { id: "escrito", rotulo: "Algo escrito", pergunta: "O que está escrito no objeto (nome, etiqueta, anotação)?", campo: "O que está escrito?", exemplo: "Ex.: “Cálculo 2 – turma B” na primeira página" },
-  { id: "dentro", rotulo: "O que tem dentro", pergunta: "O que tem dentro do objeto?", campo: "O que tem dentro?", exemplo: "Ex.: um cartão do banco e um RG" },
-  { id: "marca", rotulo: "Marca, adesivo ou desenho", pergunta: "Que marca, adesivo ou desenho o objeto tem que não aparece na foto?", campo: "Qual marca, adesivo ou desenho?", exemplo: "Ex.: uma estrela gravada atrás" },
-  { id: "quantidade", rotulo: "Quantidade", pergunta: "Quantas peças ou itens há (por exemplo, quantas chaves)?", campo: "Quantos são?", exemplo: "Ex.: 3 chaves, uma delas tetra" },
-  { id: "defeito", rotulo: "Defeito ou marca de uso", pergunta: "O objeto tem algum defeito ou marca de uso? Qual e onde?", campo: "Qual defeito e onde?", exemplo: "Ex.: haste esquerda torta" },
-  { id: "outro", rotulo: "Outro", pergunta: "", campo: "Resposta esperada", exemplo: "" }
+  { id: "escrito", rotulo: "Algo escrito", exemplo: "Ex.: “Cálculo 2 – turma B” escrito na primeira página" },
+  { id: "dentro", rotulo: "O que tem dentro", exemplo: "Ex.: um cartão do banco e um RG" },
+  { id: "marca", rotulo: "Marca, adesivo ou desenho", exemplo: "Ex.: uma estrela gravada atrás" },
+  { id: "quantidade", rotulo: "Quantidade", exemplo: "Ex.: 3 chaves, uma delas tetra" },
+  { id: "defeito", rotulo: "Defeito ou marca de uso", exemplo: "Ex.: haste esquerda torta" },
+  { id: "outro", rotulo: "Outro", exemplo: "Ex.: um detalhe que não aparece na foto" }
 ];
-
-export function perguntaDoDetalhe(tipo, perguntaLivre = "") {
-  if (tipo === "outro") return String(perguntaLivre).trim();
-  return TIPOS_DETALHE.find((t) => t.id === tipo)?.pergunta ?? "";
-}

@@ -273,3 +273,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--azul); outline: 
 .chip-opcao:has(input:checked) { background: var(--azul); border-color: var(--azul); color: #fff; }
 .chip-opcao:has(input:focus-visible) { box-shadow: var(--foco); }
 fieldset[disabled] { opacity: .45; }
+/* retirada no balcão */
+.codigo-retirada { font: 700 1.9rem/1.2 "Consolas", "Courier New", monospace; letter-spacing: .08em; color: var(--azul); background: var(--azul-claro); border: 2px dashed var(--azul); border-radius: 12px; padding: 10px 16px; text-align: center; margin: 8px 0 12px; }
+.lista-passos { margin: 0 0 12px; padding-left: 22px; }
+.lista-passos li { margin-bottom: 6px; }
+/* com um diálogo aberto, os avisos (toasts) aparecem no topo para não cobrir os botões */
+.com-modal .toasts { bottom: auto; top: 16px; z-index: 70; }

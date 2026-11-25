@@ -36,7 +36,7 @@ Requer **Node.js 18+**. Sem configuração, as fotos são analisadas por um mode
 
 ## Versão online × versão local
 
-A versão do GitHub Pages roda **inteiramente no navegador**: as fotos são analisadas por um **modelo de IA aberto (CLIP) que roda no próprio navegador** (download de ~90 MB na primeira vez), e a busca e a verificação usam regras locais. **Os dados ficam no `localStorage` de cada navegador — outras pessoas não veem o que você cadastra.** Para simular os dois lados, troque de usuário no avatar; "Restaurar exemplos" volta ao início.
+A versão do GitHub Pages roda **inteiramente no navegador**: as fotos são analisadas por um **modelo de IA aberto (CLIP) que roda no próprio navegador** (download de ~90 MB na primeira vez), e a busca e a verificação usam regras locais. **Os dados ficam no `localStorage` de cada navegador — outras pessoas não veem o que você cadastra.** Para a demonstração, **abra duas abas**, uma para quem encontrou e outra para quem perdeu: o que é publicado numa aba aparece sozinho na outra. "Restaurar exemplos" volta ao início.
 
 A versão local tem servidor (dados compartilhados por quem acessa o mesmo servidor) e integração com o Claude quando há `ANTHROPIC_API_KEY`. As duas usam o mesmo núcleo de regras (`public/compartilhado/nucleo.js`).
 

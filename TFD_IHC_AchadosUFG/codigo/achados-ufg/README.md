@@ -13,10 +13,10 @@ Professor: Dirson S. Campos · 2026
 
 Aplicação **web responsiva** (funciona no navegador do computador e do celular) que centraliza os achados e perdidos dos campi da UFG:
 
-- **Quem encontrou** tira uma foto; a IA sugere título, descrição, categoria e cor. A pessoa revisa, informa onde achou e onde o objeto vai ficar, e guarda **um detalhe que só o dono sabe** (algo que não aparece na foto).
+- **Quem encontrou** tira uma foto; a IA sugere título, descrição, categoria e cor. A pessoa revisa, informa onde achou e onde o objeto vai ficar (portaria, secretaria, BC ou com ela mesma) e pode fazer uma **anotação particular** para conferir na entrega.
 - **Quem perdeu** descreve o objeto em **linguagem natural** ("perdi uma garrafa azul com capa de silicone perto do RU ontem"). O app mostra os filtros que entendeu (que podem ser removidos) e ordena os itens por compatibilidade.
 - Se nada aparecer, a pessoa cria um **alerta** e é avisada no sino quando um item compatível for cadastrado.
-- Para recuperar o objeto, a pessoa conta o detalhe guardado (até 3 tentativas). Se o objeto não tiver detalhe — ou as tentativas acabarem — ela **descreve o objeto e quem encontrou aprova ou recusa o pedido**. Só então o app mostra onde retirar. O status segue **Encontrado → Em devolução → Devolvido**.
+- A **devolução funciona como num balcão de achados**: o local onde o objeto está é público. Se ele está num ponto de entrega, o dono toca em **"É meu!"**, recebe um **código de retirada** e, no balcão, mostra documento e descreve o objeto. Se ficou com quem encontrou, o dono descreve o objeto e **quem encontrou compara com a própria anotação** (a IA só indica se a descrição cita a anotação), decide e combina onde e quando. O status segue **Encontrado → Retirada combinada → Devolvido**.
 - Se a foto parecer um documento ou crachá, o app avisa e a foto fica **desfocada** para o público.
 
 ## 2. Duas formas de usar
@@ -85,25 +85,27 @@ e abra http://localhost:8080. (Abrir o `index.html` direto pelo explorador de ar
 
 Na versão online, o botão **Restaurar exemplos** na faixa amarela faz o mesmo.
 
-## 4. Roteiro de demonstração
+## 4. Roteiro de demonstração (duas abas)
 
-1. Entre como **Ana Clara** e busque `perdi uma garrafa azul com capa de silicone perto do RU ontem`. Remova um filtro tocando no "×".
-2. Troque de usuário (avatar) para **Pedro** → **Encontrei algo** → envie `public/demo-fotos/fone-branco.jpg` (ou qualquer foto sua). A IA sugere "Estojo de fone sem fio branco".
-3. Na etapa 3, o tipo de detalhe "Marca, adesivo ou desenho" já vem sugerido; escreva `uma estrela gravada atrás` e publique.
-4. Volte para **Ana Clara**: o sino mostra uma notificação (há um alerta de exemplo para "fone sem fio branco"). Abra o item → **É meu!** → responda `estrela`.
-5. Como **Pedro**, cadastre `chaves.jpg` marcando **"Não encontrei nenhum detalhe assim"**. Como **Ana**, peça o objeto descrevendo-o; como **Pedro**, abra o item e toque **Aprovar**.
-6. Envie `carteirinha.png` (ilustração fictícia) para ver o aviso de possíveis dados pessoais e a foto desfocada.
+O jeito mais fácil de mostrar o app — inclusive no GitHub Pages — é usar **duas abas do mesmo navegador**, cada uma com uma pessoa. O que é publicado numa aba aparece sozinho na outra.
 
-Na versão local, use duas janelas (uma anônima) para ter os dois usuários ao mesmo tempo.
+1. **Aba 1:** entre como **Ana Clara**. Busque `perdi uma garrafa azul com capa de silicone perto do RU ontem` e remova um filtro tocando no "×".
+2. **Aba 2:** abra o site em outra aba; o app pergunta "Quem está usando esta aba?" — entre como **Pedro**. Toque em **Encontrei algo** e envie `public/demo-fotos/fone-branco.jpg` (ou uma foto sua). A IA sugere "Estojo de fone sem fio branco".
+3. Na etapa 3, escolha **Balcão de atendimento da BC** e anote `uma estrela gravada atrás`. Publique.
+4. **Volte à aba 1:** a lista se atualiza sozinha e aparece o aviso do alerta de exemplo ("fone sem fio branco"). Abra o item → **É meu!** → **Vou buscar**: aparece o código de retirada.
+5. **Aba 2:** abra o item; Pedro vê que Ana vai retirar, com o código. Toque **Marcar como entregue** (o app pede confirmação).
+6. **Com quem encontrou:** como Pedro, cadastre `chaves.jpg` escolhendo **Fica comigo** e anote `3 chaves, uma tetra`. Como Ana, toque **É meu!** e descreva as chaves. Como Pedro, veja a dica da IA ("A descrição cita o que você anotou"), toque **Confere: combinar entrega** e escreva onde e quando.
+7. Envie `carteirinha.png` (ilustração fictícia) para ver o aviso de documento e a foto desfocada.
 
-## 5. Por que um "detalhe que só o dono sabe"
+Na versão online, as abas compartilham os dados porque estão no mesmo navegador; em computadores diferentes, só a versão local (com servidor) compartilha.
 
-A primeira versão pedia a quem encontrou uma **pergunta e uma resposta**. Na avaliação, isso se mostrou confuso (duas coisas para escrever, e muitas pessoas não sabem formular uma boa pergunta) e não tinha saída para objetos sem nenhum detalhe escondido. A versão atual:
+## 5. Por que a devolução funciona assim
 
-- pede **só o detalhe**, com o **tipo** escolhido em botões ("Algo escrito", "O que tem dentro", "Marca, adesivo ou desenho", "Quantidade", "Defeito ou marca de uso", "Outro"); o app monta a pergunta mostrada ao dono e a IA sugere o tipo;
-- explica **por que** o detalhe é pedido, em uma frase;
-- oferece o caminho **"Não encontrei nenhum detalhe assim"**: o dono descreve o objeto e quem encontrou aprova ou recusa — o mesmo que acontece num balcão de achados;
-- quando as 3 tentativas acabam, em vez de bloquear, abre esse mesmo pedido para avaliação humana.
+A conferência de posse passou por três versões:
+
+1. **Pergunta e resposta** escritas por quem encontrou — confuso e trabalho dobrado.
+2. **Detalhe por tipo, conferido automaticamente** (3 tentativas) — ainda "ao pé da letra": exigia acertar palavras e escondia o local de retirada, que na vida real é público.
+3. **Como num balcão de achados (atual):** o local é público; no ponto de entrega a conferência é presencial (código + documento + descrição); com quem encontrou, ele compara a descrição do dono com uma anotação particular e decide. A IA só dá uma dica — **quem decide é a pessoa**. Entregar, recusar e desistir pedem confirmação, e "Não era o dono" desfaz a retirada.
 
 ## 6. Estrutura
 
@@ -119,8 +121,8 @@ achados-ufg/
 │   ├── modo-estatico.js      API dentro do navegador, usada quando não há servidor
 │   ├── compartilhado/
 │   │   ├── nucleo.js         Regras da API (usadas pelo servidor E pela versão estática)
-│   │   ├── regras.js         Busca e verificação por regras (sem Claude)
-│   │   └── catalogo.js       Categorias, cores, locais da UFG, pontos de entrega e tipos de detalhe
+│   │   ├── regras.js         Busca e dica de conferência por regras (sem Claude)
+│   │   └── catalogo.js       Categorias, cores, locais da UFG, pontos de entrega e dicas de anotação
 │   ├── dados/seed.json       Itens de exemplo (datas relativas ao dia de execução)
 │   └── demo-fotos/           Fotos de exemplo + CREDITOS.md
 ├── scripts/reset-db.js       Restaura os dados de exemplo
@@ -132,13 +134,13 @@ achados-ufg/
 | Método | Rota | Função |
 |---|---|---|
 | GET | `/api/config` | Catálogo e modo de IA ativo |
-| GET | `/api/itens` · `/api/itens/:id` | Lista / detalhe (sem o detalhe secreto) |
+| GET | `/api/itens` · `/api/itens/:id` | Lista / detalhe (a anotação só aparece para quem encontrou) |
 | POST | `/api/analisar` | Envia a foto e recebe a sugestão da IA (ou `fonte: "manual"` para o navegador analisar) |
 | POST | `/api/itens` | Publica um item encontrado e dispara alertas |
 | POST | `/api/buscar` · `/api/buscar/refinar` | Busca em linguagem natural / reordena após remover filtros |
-| POST | `/api/itens/:id/reivindicar` | Confere o detalhe informado pelo dono |
-| POST | `/api/itens/:id/pedidos` | Envia um pedido de devolução para quem encontrou avaliar |
-| POST | `/api/itens/:id/pedidos/:pid/aprovar` · `/recusar` | Quem encontrou avalia o pedido |
+| POST | `/api/itens/:id/pedidos` | "É meu!": gera código de retirada (ponto de entrega) ou envia a descrição para quem encontrou |
+| POST | `/api/itens/:id/pedidos/:pid/aprovar` · `/recusar` | Quem encontrou aceita (com local e horário) ou recusa |
+| POST | `/api/itens/:id/reabrir` | Desfaz a retirada combinada (não era o dono, desistência) |
 | POST | `/api/itens/:id/devolver` | Conclui a devolução |
 | GET/POST/DELETE | `/api/alertas` (+ `/:id/restaurar`) | Alertas do usuário ("Desfazer" restaura) |
 | GET/POST | `/api/notificacoes` (+ `/lidas`) | Notificações do sino |
@@ -162,10 +164,11 @@ O workflow `.github/workflows/pages.yml` (na raiz do repositório) publica a pas
 - Sugestão da IA sempre **editável**, identificada com selo, nível de confiança e alternativas ("também pode ser…").
 - Barra de progresso ao baixar o modelo da IA (feedback de operações longas).
 - Filtros interpretados exibidos como *chips* removíveis; percentual de compatibilidade e motivo de cada resultado.
-- Detalhe secreto escolhido por tipo, com rótulo e exemplo que mudam conforme a escolha; alternativa de aprovação humana.
+- Devolução como num balcão: local público, código de retirada, conferência humana com a IA apenas como dica; confirmação antes de ações irreversíveis e opção de desfazer.
+- Duas abas, duas pessoas: usuário por aba, atualização automática entre abas e aviso quando chega notificação.
 - Fotos exibidas inteiras (sem corte), para que o dono reconheça o objeto.
 - Estados de carregamento, vazio e erro com mensagens em linguagem simples; "Desfazer" ao excluir alerta.
-- Acessibilidade: HTML semântico, link "pular para o conteúdo", foco visível, foco levado ao título a cada troca de tela, `aria-live` para resultados e erros, diálogo com foco preso e tecla Esc, ajuste de tamanho de texto, modo de alto contraste, respeito a `prefers-reduced-motion`, contraste mínimo 4,5:1 (WCAG AA).
+- Acessibilidade verificada com **axe-core** (WCAG 2.2 AA: 16 verificações em 8 telas, celular e computador, **nenhuma violação**) e teste só com teclado nos diálogos. HTML semântico, link "pular para o conteúdo", foco visível, foco levado ao título a cada troca de tela, `aria-live` para resultados e erros, diálogo com foco preso e tecla Esc, ajuste de tamanho de texto, modo de alto contraste, respeito a `prefers-reduced-motion`, contraste mínimo 4,5:1 (WCAG AA).
 
 ## 10. Limitações da IA e da aplicação (importante)
 
@@ -179,7 +182,7 @@ O workflow `.github/workflows/pages.yml` (na raiz do repositório) publica a pas
 **Busca e verificação sem Claude (regras locais)**
 
 - A busca usa um dicionário de termos (categorias, cores, locais) e não entende sinônimos fora dele, nem negações ("garrafa **sem adesivos**" conta como citação de "adesivo").
-- A verificação compara palavras: aceita se pelo menos metade das palavras importantes do detalhe aparecer na resposta, e exige que números batam exatamente. **Não tolera erros de digitação** ("fazoleti" ≠ "Fazzoletti").
+- A dica de conferência ("a descrição cita o que você anotou") compara palavras: considera que cita se pelo menos metade das palavras importantes da anotação aparecer, e exige que números batam. **Não tolera erros de digitação** ("fazoleti" ≠ "Fazzoletti") — por isso é só uma dica e a decisão é de quem encontrou.
 
 **Claude**
 
@@ -188,7 +191,7 @@ O workflow `.github/workflows/pages.yml` (na raiz do repositório) publica a pas
 
 **Protótipo**
 
-- **Na versão online, os dados não são compartilhados entre pessoas** (cada navegador tem os seus). Para um serviço real seria preciso um banco de dados na nuvem (por exemplo, Supabase ou Firebase) ou hospedar o servidor Node.
+- **Na versão online, os dados não são compartilhados entre computadores** (cada navegador tem os seus; abas do mesmo navegador compartilham). Para um serviço real seria preciso um banco de dados na nuvem (por exemplo, Supabase ou Firebase) ou hospedar o servidor Node.
 - Login **simulado** (só um nome). Em produção seria a conta institucional da UFG.
 - A foto com dados pessoais é desfocada **no navegador** (CSS); o arquivo original continua acessível pela URL.
 - Notificações só dentro do app (sem e-mail ou push).
@@ -205,7 +208,9 @@ O código, os wireframes e as capturas foram gerados com apoio de um assistente 
 - servidor deixou de cair quando a pasta `uploads/` é apagada com o app rodando;
 - núcleo da API compartilhado para permitir a versão estática no GitHub Pages;
 - **IA aberta (CLIP) no navegador** no lugar das respostas pré-definidas por nome de arquivo;
-- **redesenho da verificação de posse** (detalhe por tipo + pedido aprovado por quem encontrou) e comparação de respostas mais tolerante a frases.
+- **dois redesenhos da conferência de posse**, até chegar à devolução "como num balcão" (código de retirada, anotação particular, decisão humana);
+- usuário por aba e atualização entre abas para a demonstração com duas pessoas;
+- auditoria de IHC: descrição da IA sem instruções misturadas, avisos que não cobrem diálogos, foco inicial nos diálogos, confirmações antes de ações irreversíveis.
 
 > Espaço para o grupo: registre aqui qualquer ajuste feito manualmente após a entrega da IA (arquivo, o que mudou e por quê).
 

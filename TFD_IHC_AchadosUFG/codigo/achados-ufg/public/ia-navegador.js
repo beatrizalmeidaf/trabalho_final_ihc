@@ -94,7 +94,8 @@ export async function analisarNoNavegador(urlImagem, onProgresso) {
   const alternativas = objs.slice(1, 3).map((o) => OBJETOS.find((x) => x[0] === o.label)[1].toLowerCase());
   return {
     titulo: `${nome} ${adjetivo}`,
-    descricao: `${nome} de cor predominante ${cor[1]}. Complete com marca, adesivos, estampas ou defeitos que ajudem o dono a reconhecer.`,
+    // Só fatos reconhecidos pela IA; a orientação "acrescente marcas…" fica na interface, não no conteúdo publicado.
+    descricao: `${nome} ${adjetivo}.`,
     categoria, cor: cor[3],
     tags: [nome.toLowerCase(), cor[1]],
     dadosSensiveis: documento,

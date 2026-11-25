@@ -20,8 +20,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "portaria-reitoria",
-   "pergunta": "Que marca, adesivo ou desenho o objeto tem que não aparece na foto?",
-   "resposta": "um coração desenhado no fundo",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "encontrado",
@@ -31,7 +29,7 @@
     "vinculo": "Servidor(a)"
    },
    "pedidos": [],
-   "tipoDetalhe": "marca"
+   "anotacao": "um coração desenhado no fundo"
   },
   {
    "id": "itm_squeeze01",
@@ -52,8 +50,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "secretaria-caa",
-   "pergunta": "Qual é a capacidade marcada no squeeze?",
-   "resposta": "500 ml",
    "geradoPorIA": true,
    "editadoPeloUsuario": true,
    "status": "encontrado",
@@ -63,7 +59,7 @@
     "vinculo": "Estudante"
    },
    "pedidos": [],
-   "tipoDetalhe": "escrito"
+   "anotacao": "500 ml"
   },
   {
    "id": "itm_garrafa02",
@@ -84,8 +80,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "bc-achados",
-   "pergunta": "O que está gravado no fundo da garrafa?",
-   "resposta": "iniciais RM",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "encontrado",
@@ -95,7 +89,7 @@
     "vinculo": "Estudante"
    },
    "pedidos": [],
-   "tipoDetalhe": "escrito"
+   "anotacao": "iniciais RM"
   },
   {
    "id": "itm_caderno01",
@@ -116,8 +110,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "secretaria-caa",
-   "pergunta": "O que está escrito na primeira página?",
-   "resposta": "Cálculo 2 turma B",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "encontrado",
@@ -127,7 +119,7 @@
     "vinculo": "Servidor(a)"
    },
    "pedidos": [],
-   "tipoDetalhe": "escrito"
+   "anotacao": "Cálculo 2 turma B"
   },
   {
    "id": "itm_chuva01",
@@ -147,8 +139,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "portaria-inf",
-   "pergunta": "Qual a marca escrita na alça de velcro?",
-   "resposta": "Fazzoletti",
    "geradoPorIA": false,
    "editadoPeloUsuario": false,
    "status": "encontrado",
@@ -158,7 +148,7 @@
     "vinculo": "Setor"
    },
    "pedidos": [],
-   "tipoDetalhe": "escrito"
+   "anotacao": "Fazzoletti"
   },
   {
    "id": "itm_oculos01",
@@ -179,8 +169,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "bc-achados",
-   "pergunta": "Em que estojo ou capinha os óculos estavam?",
-   "resposta": "sem estojo",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "encontrado",
@@ -190,7 +178,7 @@
     "vinculo": "Setor"
    },
    "pedidos": [],
-   "tipoDetalhe": "outro"
+   "anotacao": "lente direita com um arranhão"
   },
   {
    "id": "itm_moletom01",
@@ -211,8 +199,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "comigo",
-   "pergunta": null,
-   "resposta": null,
    "geradoPorIA": true,
    "editadoPeloUsuario": true,
    "status": "encontrado",
@@ -222,7 +208,7 @@
     "vinculo": "Estudante"
    },
    "pedidos": [],
-   "tipoDetalhe": null
+   "anotacao": "tamanho G, nome \"Lu\" bordado na etiqueta"
   },
   {
    "id": "itm_carreg01",
@@ -243,8 +229,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "portaria-inf",
-   "pergunta": "Qual a capacidade escrita no carregador?",
-   "resposta": "10000 mAh",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "encontrado",
@@ -254,7 +238,7 @@
     "vinculo": "Setor"
    },
    "pedidos": [],
-   "tipoDetalhe": "escrito"
+   "anotacao": "10000 mAh"
   },
   {
    "id": "itm_carteira01",
@@ -275,8 +259,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "portaria-reitoria",
-   "pergunta": "Quais documentos estão dentro da carteira?",
-   "resposta": "RG e cartão do banco",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "encontrado",
@@ -286,7 +268,7 @@
     "vinculo": "Servidor(a)"
    },
    "pedidos": [],
-   "tipoDetalhe": "dentro"
+   "anotacao": "RG e cartão do banco"
   },
   {
    "id": "itm_calc01",
@@ -306,8 +288,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "comigo",
-   "pergunta": "Que nome está escrito atrás?",
-   "resposta": "Rafael",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "em_devolucao",
@@ -320,8 +300,21 @@
     "nome": "Luiza M.",
     "vinculo": "Estudante"
    },
-   "pedidos": [],
-   "tipoDetalhe": "escrito"
+   "pedidos": [
+    {
+     "id": "ped_calc01",
+     "usuario": {
+      "id": "rafael-s",
+      "nome": "Rafael S."
+     },
+     "texto": "Calculadora Casio com meu nome, Rafael, escrito atrás com caneta.",
+     "confere": true,
+     "situacao": "aprovado",
+     "mensagem": "Amanhã às 10h na entrada do IME.",
+     "em": "2026-11-23T12:00:00.000Z"
+    }
+   ],
+   "anotacao": "Rafael"
   },
   {
    "id": "itm_mochila01",
@@ -341,8 +334,6 @@
    "fotoSensivel": false,
    "avisoPrivacidade": "",
    "pontoEntrega": "portaria-reitoria",
-   "pergunta": "O que havia no bolso frontal?",
-   "resposta": "fone com fio",
    "geradoPorIA": true,
    "editadoPeloUsuario": false,
    "status": "devolvido",
@@ -356,7 +347,7 @@
     "vinculo": "Servidor(a)"
    },
    "pedidos": [],
-   "tipoDetalhe": "dentro"
+   "anotacao": "fone com fio"
   }
  ],
  "alertas": [

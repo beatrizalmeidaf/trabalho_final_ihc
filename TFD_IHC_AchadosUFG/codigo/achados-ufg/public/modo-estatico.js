@@ -4,7 +4,7 @@
 import { criarNucleo, materializarSemente } from "./compartilhado/nucleo.js";
 import { analiseManual, buscarLocal, compararLocal } from "./compartilhado/regras.js";
 
-const CHAVE = "achados.db.v3"; // mude a versão quando a semente mudar
+const CHAVE = "achados.db.v4"; // mude a versão quando a semente mudar
 
 export async function criarApiEstatica() {
   const semente = await (await fetch("dados/seed.json")).json();
@@ -51,7 +51,7 @@ export async function criarApiEstatica() {
     });
   }
 
-  return async function apiEstatica(caminho, opcoes = {}, usuario = null) {
+  const apiEstatica = async function (caminho, opcoes = {}, usuario = null) {
     const metodo = (opcoes.method || "GET").toUpperCase();
     const [rota, qs] = caminho.split("?");
     if (rota === "/api/analisar") {
@@ -67,4 +67,8 @@ export async function criarApiEstatica() {
     if (status >= 400) { const e = new Error(dados.erro || "Algo deu errado."); e.status = status; e.dados = dados; throw e; }
     return dados;
   };
+  // Para várias abas: quando outra aba grava os dados, esta descarta a cópia em memória.
+  apiEstatica.chave = CHAVE;
+  apiEstatica.invalidar = () => { estado = null; };
+  return apiEstatica;
 }
