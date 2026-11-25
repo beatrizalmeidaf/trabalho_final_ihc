@@ -1,4 +1,6 @@
-# Publica a versão estática do Achados UFG (pasta codigo/achados-ufg/public) no GitHub Pages.
+# Publica a versão estática do Achados UFG (pasta TFD_IHC_AchadosUFG/codigo/achados-ufg/public) no GitHub Pages.
+# Dois jobs (empacotar → publicar): o artefato já está disponível quando a publicação começa,
+# evitando o erro intermitente "No artifacts named github-pages were found".
 name: Publicar no GitHub Pages
 
 on:
@@ -13,19 +15,24 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  publicar:
+  empacotar:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: TFD_IHC_AchadosUFG/codigo/achados-ufg/public
+
+  publicar:
+    needs: empacotar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v5
